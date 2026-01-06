@@ -144,14 +144,6 @@
             transition: all 0.2s;
         }
         
-        .view-btn:hover {
-            background: #f5f5f5;
-            color: #333;
-            transform: translateY(-2px);
-            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
-            border-color: #999;
-        }
-        
         .view-btn.active {
             background: #333;
             color: white;
@@ -202,10 +194,7 @@
             vertical-align: top;
             transition: background-color 0.2s;
             padding: 4px 0;
-        }
-        
-        .text-segment:hover {
-            background-color: #f0f0f0;
+            cursor: pointer;
         }
         
         .text-segment.highlight {
@@ -312,10 +301,10 @@
             
             <div class="diff-container">
                 <div class="view-buttons">
-                    <button class="view-btn active" data-view="unified" onmouseenter="previewView('unified')" onmouseleave="restoreView()" onclick="setView('unified')">Unified Comparison</button>
-                    <button class="view-btn" data-view="original" onmouseenter="previewView('original')" onmouseleave="restoreView()" onclick="setView('original')">Original (Removed)</button>
-                    <button class="view-btn" data-view="modified" onmouseenter="previewView('modified')" onmouseleave="restoreView()" onclick="setView('modified')">Modified (Added)</button>
-                    <button class="view-btn" data-view="sidebyside" onmouseenter="previewView('sidebyside')" onmouseleave="restoreView()" onclick="setView('sidebyside')">Side by Side</button>
+                    <button class="view-btn active" data-view="unified" onclick="setView('unified')">Unified Comparison</button>
+                    <button class="view-btn" data-view="original" onclick="setView('original')">Original (Removed)</button>
+                    <button class="view-btn" data-view="modified" onclick="setView('modified')">Modified (Added)</button>
+                    <button class="view-btn" data-view="sidebyside" onclick="setView('sidebyside')">Side by Side</button>
                 </div>
                 <div class="diff-unified" id="diffDisplay">
                     <h3 id="viewTitle">Unified Comparison</h3>
@@ -328,10 +317,9 @@
     <script>
         let currentDiff = [];
         let currentView = 'unified';
-        let isHovering = false;
         let originalLines = [];
         let modifiedLines = [];
-        
+
         function compareDiff() {
             const text1 = document.getElementById('text1').value;
             const text2 = document.getElementById('text2').value;
@@ -353,34 +341,18 @@
             updateDisplay();
             document.getElementById('results').classList.add('visible');
             
-            // Reset button states
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelector('[data-view="unified"]').classList.add('active');
         }
-        
-        function previewView(view) {
-            isHovering = true;
-            renderView(view);
-        }
-        
-        function restoreView() {
-            isHovering = false;
-            renderView(currentView);
-        }
-        
+
         function setView(view) {
             currentView = view;
             renderView(view);
             
-            // Update active button
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelector(`[data-view="${view}"]`).classList.add('active');
         }
-        
+
         function renderView(view) {
             const displayElement = document.getElementById('diffDisplay');
             
@@ -397,47 +369,31 @@
                     titleElement.textContent = 'Unified Comparison';
                     currentDiff.forEach(item => {
                         const value = escapeHtml(item.value);
-                        if (item.type === 'unchanged') {
-                            content += value;
-                        } else if (item.type === 'removed') {
-                            content += `<span class="removed">${value}</span>`;
-                        } else if (item.type === 'added') {
-                            content += `<span class="added">${value}</span>`;
-                        }
+                        if (item.type === 'unchanged') content += value;
+                        else if (item.type === 'removed') content += `<span class="removed">${value}</span>`;
+                        else if (item.type === 'added') content += `<span class="added">${value}</span>`;
                     });
                 } else if (view === 'original') {
                     titleElement.textContent = 'Original Text (Showing Removed)';
                     currentDiff.forEach(item => {
                         const value = escapeHtml(item.value);
-                        if (item.type === 'unchanged' || item.type === 'removed') {
-                            if (item.type === 'removed') {
-                                content += `<span class="removed">${value}</span>`;
-                            } else {
-                                content += value;
-                            }
-                        }
+                        if (item.type === 'removed') content += `<span class="removed">${value}</span>`;
+                        else if (item.type === 'unchanged') content += value;
                     });
                 } else if (view === 'modified') {
                     titleElement.textContent = 'Modified Text (Showing Added)';
                     currentDiff.forEach(item => {
                         const value = escapeHtml(item.value);
-                        if (item.type === 'unchanged' || item.type === 'added') {
-                            if (item.type === 'added') {
-                                content += `<span class="added">${value}</span>`;
-                            } else {
-                                content += value;
-                            }
-                        }
+                        if (item.type === 'added') content += `<span class="added">${value}</span>`;
+                        else if (item.type === 'unchanged') content += value;
                     });
                 }
                 
                 document.getElementById('diffUnified').innerHTML = content;
             }
         }
-        
+
         function renderSideBySide() {
-            // Create segments: new segment starts when unchanged text appears after a change
-            // BUT ignore unchanged spaces - they don't break the change block
             const segments = [];
             let currentSegment = { left: '', right: '' };
             let inChangeBlock = false;
@@ -447,232 +403,108 @@
                 const isSpace = item.value.trim() === '';
                 
                 if (item.type === 'unchanged') {
-                    // If it's just whitespace, don't break the change block
                     if (isSpace) {
                         currentSegment.left += val;
                         currentSegment.right += val;
                     } else {
-                        // Non-space unchanged text - if we were in a change block, start new segment
                         if (inChangeBlock) {
                             segments.push(currentSegment);
                             currentSegment = { left: '', right: '' };
                             inChangeBlock = false;
                         }
-                        
                         currentSegment.left += val;
                         currentSegment.right += val;
                     }
                 } else {
-                    // We're in a change block (removed or added)
                     inChangeBlock = true;
-                    
-                    if (item.type === 'removed') {
-                        currentSegment.left += `<span class="removed">${val}</span>`;
-                    } else if (item.type === 'added') {
-                        currentSegment.right += `<span class="added">${val}</span>`;
-                    }
+                    if (item.type === 'removed') currentSegment.left += `<span class="removed">${val}</span>`;
+                    if (item.type === 'added') currentSegment.right += `<span class="added">${val}</span>`;
                 }
             });
             
-            // Don't forget the last segment
-            if (currentSegment.left || currentSegment.right) {
-                segments.push(currentSegment);
-            }
-            
-            // Build HTML with paired segments
+            if (currentSegment.left || currentSegment.right) segments.push(currentSegment);
+
             let leftHtml = '<div class="side-panel"><h3>Original (Text 1)</h3><div id="leftPanel">';
             let rightHtml = '<div class="side-panel"><h3>Modified (Text 2)</h3><div id="rightPanel">';
-            
+
             segments.forEach((seg, idx) => {
-                leftHtml += `<div class="text-segment" id="left-seg-${idx}" onmouseenter="highlightPair(${idx})" onmouseleave="unhighlightPair(${idx})">${seg.left}</div>`;
-                rightHtml += `<div class="text-segment" id="right-seg-${idx}" onmouseenter="highlightPair(${idx})" onmouseleave="unhighlightPair(${idx})">${seg.right}</div>`;
+                const returnSymbol = (idx < segments.length - 1) ? '↩' : '';
+                leftHtml += `<div class="text-segment" id="left-seg-${idx}" onclick="toggleHighlight(${idx})">${seg.left}${returnSymbol}</div>`;
+                rightHtml += `<div class="text-segment" id="right-seg-${idx}" onclick="toggleHighlight(${idx})">${seg.right}${returnSymbol}</div>`;
             });
-            
+
             leftHtml += '</div></div>';
             rightHtml += '</div></div>';
-            
-            const html = `<div class="side-by-side">${leftHtml}${rightHtml}</div>`;
-            
-            // Set up synchronization after render
+
             setTimeout(() => {
                 alignSegments(segments.length);
-                
-                // Re-sync on window resize
                 window.removeEventListener('resize', alignResizeHandler);
                 window.addEventListener('resize', alignResizeHandler);
             }, 50);
-            
-            return html;
+
+            return `<div class="side-by-side">${leftHtml}${rightHtml}</div>`;
         }
-        
+
+        function toggleHighlight(idx) {
+            const leftSeg = document.getElementById(`left-seg-${idx}`);
+            const rightSeg = document.getElementById(`right-seg-${idx}`);
+            if (leftSeg) leftSeg.classList.toggle('highlight');
+            if (rightSeg) rightSeg.classList.toggle('highlight');
+        }
+
         let alignResizeHandler = () => {
             const segmentCount = document.querySelectorAll('[id^="left-seg-"]').length;
             alignSegments(segmentCount);
         };
-        
-        function highlightPair(idx) {
-            const leftSeg = document.getElementById(`left-seg-${idx}`);
-            const rightSeg = document.getElementById(`right-seg-${idx}`);
-            
-            if (leftSeg) leftSeg.classList.add('highlight');
-            if (rightSeg) rightSeg.classList.add('highlight');
-        }
-        
-        function unhighlightPair(idx) {
-            const leftSeg = document.getElementById(`left-seg-${idx}`);
-            const rightSeg = document.getElementById(`right-seg-${idx}`);
-            
-            if (leftSeg) leftSeg.classList.remove('highlight');
-            if (rightSeg) rightSeg.classList.remove('highlight');
-        }
-        
+
         function alignSegments(segmentCount) {
             for (let i = 0; i < segmentCount; i++) {
                 const leftSeg = document.getElementById(`left-seg-${i}`);
                 const rightSeg = document.getElementById(`right-seg-${i}`);
-                
                 if (!leftSeg || !rightSeg) continue;
-                
-                // Reset heights
                 leftSeg.style.minHeight = '';
                 rightSeg.style.minHeight = '';
-                
-                // Force reflow
                 void leftSeg.offsetHeight;
-                
-                // Get actual heights
-                const leftHeight = leftSeg.offsetHeight;
-                const rightHeight = rightSeg.offsetHeight;
-                
-                // Set both to max height to keep aligned
-                const maxHeight = Math.max(leftHeight, rightHeight);
+                const maxHeight = Math.max(leftSeg.offsetHeight, rightSeg.offsetHeight);
                 leftSeg.style.minHeight = maxHeight + 'px';
                 rightSeg.style.minHeight = maxHeight + 'px';
             }
         }
-        
-        function computeLineDiff(lines1, lines2) {
-            const m = lines1.length;
-            const n = lines2.length;
-            const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-            
-            for (let i = 1; i <= m; i++) {
-                for (let j = 1; j <= n; j++) {
-                    if (lines1[i - 1] === lines2[j - 1]) {
-                        dp[i][j] = dp[i - 1][j - 1] + 1;
-                    } else {
-                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-                    }
-                }
-            }
-            
-            const result = [];
-            let i = m, j = n;
-            
-            while (i > 0 || j > 0) {
-                if (i > 0 && j > 0 && lines1[i - 1] === lines2[j - 1]) {
-                    result.unshift({ 
-                        type: 'unchanged', 
-                        leftLine: i - 1, 
-                        rightLine: j - 1,
-                        leftContent: lines1[i - 1],
-                        rightContent: lines2[j - 1]
-                    });
-                    i--;
-                    j--;
-                } else if (i > 0 && j > 0 && dp[i - 1][j - 1] >= Math.max(dp[i - 1][j], dp[i][j - 1])) {
-                    result.unshift({ 
-                        type: 'modified', 
-                        leftLine: i - 1, 
-                        rightLine: j - 1,
-                        leftContent: lines1[i - 1],
-                        rightContent: lines2[j - 1]
-                    });
-                    i--;
-                    j--;
-                } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-                    result.unshift({ 
-                        type: 'added', 
-                        leftLine: null, 
-                        rightLine: j - 1,
-                        leftContent: '',
-                        rightContent: lines2[j - 1]
-                    });
-                    j--;
-                } else if (i > 0) {
-                    result.unshift({ 
-                        type: 'removed', 
-                        leftLine: i - 1, 
-                        rightLine: null,
-                        leftContent: lines1[i - 1],
-                        rightContent: ''
-                    });
-                    i--;
-                }
-            }
-            
-            return result;
-        }
-        
-        function updateDisplay() {
-            renderView(currentView);
-            
-            let added = 0, removed = 0, unchanged = 0;
-            
-            currentDiff.forEach(item => {
-                if (item.type === 'unchanged' && item.value.trim()) {
-                    unchanged++;
-                } else if (item.type === 'removed' && item.value.trim()) {
-                    removed++;
-                } else if (item.type === 'added' && item.value.trim()) {
-                    added++;
-                }
-            });
-            
-            document.getElementById('addedCount').textContent = added;
-            document.getElementById('removedCount').textContent = removed;
-            document.getElementById('unchangedCount').textContent = unchanged;
-        }
-        
+
         function computeDiff(arr1, arr2) {
-            const m = arr1.length;
-            const n = arr2.length;
+            const m = arr1.length, n = arr2.length;
             const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-            
-            for (let i = 1; i <= m; i++) {
-                for (let j = 1; j <= n; j++) {
-                    if (arr1[i - 1] === arr2[j - 1]) {
-                        dp[i][j] = dp[i - 1][j - 1] + 1;
-                    } else {
-                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-                    }
-                }
-            }
-            
+            for (let i = 1; i <= m; i++)
+                for (let j = 1; j <= n; j++)
+                    dp[i][j] = (arr1[i-1] === arr2[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+
             const result = [];
             let i = m, j = n;
-            
             while (i > 0 || j > 0) {
-                if (i > 0 && j > 0 && arr1[i - 1] === arr2[j - 1]) {
-                    result.unshift({ type: 'unchanged', value: arr1[i - 1] });
-                    i--;
-                    j--;
-                } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-                    result.unshift({ type: 'added', value: arr2[j - 1] });
-                    j--;
-                } else if (i > 0) {
-                    result.unshift({ type: 'removed', value: arr1[i - 1] });
-                    i--;
-                }
+                if (i > 0 && j > 0 && arr1[i-1] === arr2[j-1]) { result.unshift({type:'unchanged', value: arr1[i-1]}); i--; j--; }
+                else if (j > 0 && (i===0 || dp[i][j-1]>=dp[i-1][j])) { result.unshift({type:'added', value: arr2[j-1]}); j--; }
+                else if (i > 0) { result.unshift({type:'removed', value: arr1[i-1]}); i--; }
             }
-            
             return result;
         }
-        
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function updateDisplay() {
+            renderView(currentView);
+            let added=0, removed=0, unchanged=0;
+            currentDiff.forEach(item => {
+                if (item.type==='unchanged' && item.value.trim()) unchanged++;
+                else if (item.type==='removed' && item.value.trim()) removed++;
+                else if (item.type==='added' && item.value.trim()) added++;
+            });
+            document.getElementById('addedCount').textContent = added;
+            document.getElementById('removedCount').textContent = removed;
+            document.getElementById('unchangedCount').textContent = unchanged;
         }
     </script>
 </body>
