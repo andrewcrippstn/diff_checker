@@ -13,7 +13,7 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f5f5;
             min-height: 100vh;
             padding: 20px;
         }
@@ -23,20 +23,27 @@
             margin: 0 auto;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             overflow: hidden;
+            border: 1px solid #e0e0e0;
         }
         
         header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: white;
+            color: #333;
             padding: 30px;
             text-align: center;
+            border-bottom: 2px solid #e0e0e0;
         }
         
         h1 {
             font-size: 2em;
             margin-bottom: 10px;
+            color: #333;
+        }
+        
+        header p {
+            color: #666;
         }
         
         .input-section {
@@ -72,7 +79,7 @@
         
         textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #999;
         }
         
         .button-section {
@@ -81,7 +88,7 @@
         }
         
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #333;
             color: white;
             border: none;
             padding: 15px 40px;
@@ -94,7 +101,8 @@
         
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            background: #555;
         }
         
         button:active {
@@ -103,7 +111,7 @@
         
         .results {
             padding: 30px;
-            background: #f8f9fa;
+            background: white;
             border-top: 2px solid #e9ecef;
             display: none;
         }
@@ -116,11 +124,44 @@
             margin-top: 20px;
         }
         
-        .diff-unified {
+        .view-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .view-btn {
             background: white;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .view-btn:hover {
+            background: #f5f5f5;
+            color: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            border-color: #999;
+        }
+        
+        .view-btn.active {
+            background: #333;
+            color: white;
+            border-color: #333;
+        }
+        
+        .diff-unified {
+            background: #fafafa;
             border-radius: 8px;
             padding: 20px;
-            border: 2px solid #ddd;
+            border: 1px solid #e0e0e0;
         }
         
         .diff-unified h3 {
@@ -160,18 +201,18 @@
         }
         
         .stat-box {
-            background: white;
+            background: #fafafa;
             padding: 20px;
             border-radius: 8px;
             text-align: center;
             flex: 1;
-            border: 2px solid #ddd;
+            border: 1px solid #e0e0e0;
         }
         
         .stat-number {
             font-size: 2em;
             font-weight: bold;
-            color: #667eea;
+            color: #333;
         }
         
         .stat-label {
@@ -228,8 +269,13 @@
             </div>
             
             <div class="diff-container">
+                <div class="view-buttons">
+                    <button class="view-btn active" data-view="unified" onmouseenter="previewView('unified')" onmouseleave="restoreView()" onclick="setView('unified')">Unified Comparison</button>
+                    <button class="view-btn" data-view="original" onmouseenter="previewView('original')" onmouseleave="restoreView()" onclick="setView('original')">Original (Removed)</button>
+                    <button class="view-btn" data-view="modified" onmouseenter="previewView('modified')" onmouseleave="restoreView()" onclick="setView('modified')">Modified (Added)</button>
+                </div>
                 <div class="diff-unified">
-                    <h3>Unified Comparison</h3>
+                    <h3 id="viewTitle">Unified Comparison</h3>
                     <div class="diff-content" id="diffUnified"></div>
                 </div>
             </div>
@@ -237,6 +283,10 @@
     </div>
 
     <script>
+        let currentDiff = [];
+        let currentView = 'unified';
+        let isHovering = false;
+        
         function compareDiff() {
             const text1 = document.getElementById('text1').value;
             const text2 = document.getElementById('text2').value;
@@ -249,10 +299,103 @@
             const words1 = text1.split(/(\s+)/);
             const words2 = text2.split(/(\s+)/);
             
-            const diff = computeDiff(words1, words2);
+            currentDiff = computeDiff(words1, words2);
+            currentView = 'unified';
             
-            displayDiff(diff);
+            updateDisplay();
             document.getElementById('results').classList.add('visible');
+            
+            // Reset button states
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector('[data-view="unified"]').classList.add('active');
+        }
+        
+        function previewView(view) {
+            isHovering = true;
+            renderView(view);
+        }
+        
+        function restoreView() {
+            isHovering = false;
+            renderView(currentView);
+        }
+        
+        function setView(view) {
+            currentView = view;
+            renderView(view);
+            
+            // Update active button
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+        }
+        
+        function renderView(view) {
+            let html = '';
+            const titleElement = document.getElementById('viewTitle');
+            
+            if (view === 'unified') {
+                titleElement.textContent = 'Unified Comparison';
+                currentDiff.forEach(item => {
+                    const value = escapeHtml(item.value);
+                    if (item.type === 'unchanged') {
+                        html += value;
+                    } else if (item.type === 'removed') {
+                        html += `<span class="removed">${value}</span>`;
+                    } else if (item.type === 'added') {
+                        html += `<span class="added">${value}</span>`;
+                    }
+                });
+            } else if (view === 'original') {
+                titleElement.textContent = 'Original Text (Showing Removed)';
+                currentDiff.forEach(item => {
+                    const value = escapeHtml(item.value);
+                    if (item.type === 'unchanged' || item.type === 'removed') {
+                        if (item.type === 'removed') {
+                            html += `<span class="removed">${value}</span>`;
+                        } else {
+                            html += value;
+                        }
+                    }
+                });
+            } else if (view === 'modified') {
+                titleElement.textContent = 'Modified Text (Showing Added)';
+                currentDiff.forEach(item => {
+                    const value = escapeHtml(item.value);
+                    if (item.type === 'unchanged' || item.type === 'added') {
+                        if (item.type === 'added') {
+                            html += `<span class="added">${value}</span>`;
+                        } else {
+                            html += value;
+                        }
+                    }
+                });
+            }
+            
+            document.getElementById('diffUnified').innerHTML = html;
+        }
+        
+        function updateDisplay() {
+            renderView(currentView);
+            
+            let added = 0, removed = 0, unchanged = 0;
+            
+            currentDiff.forEach(item => {
+                if (item.type === 'unchanged' && item.value.trim()) {
+                    unchanged++;
+                } else if (item.type === 'removed' && item.value.trim()) {
+                    removed++;
+                } else if (item.type === 'added' && item.value.trim()) {
+                    added++;
+                }
+            });
+            
+            document.getElementById('addedCount').textContent = added;
+            document.getElementById('removedCount').textContent = removed;
+            document.getElementById('unchangedCount').textContent = unchanged;
         }
         
         function computeDiff(arr1, arr2) {
@@ -288,31 +431,6 @@
             }
             
             return result;
-        }
-        
-        function displayDiff(diff) {
-            let htmlUnified = '';
-            let added = 0, removed = 0, unchanged = 0;
-            
-            diff.forEach(item => {
-                const value = escapeHtml(item.value);
-                
-                if (item.type === 'unchanged') {
-                    htmlUnified += value;
-                    if (item.value.trim()) unchanged++;
-                } else if (item.type === 'removed') {
-                    htmlUnified += `<span class="removed">${value}</span>`;
-                    if (item.value.trim()) removed++;
-                } else if (item.type === 'added') {
-                    htmlUnified += `<span class="added">${value}</span>`;
-                    if (item.value.trim()) added++;
-                }
-            });
-            
-            document.getElementById('diffUnified').innerHTML = htmlUnified;
-            document.getElementById('addedCount').textContent = added;
-            document.getElementById('removedCount').textContent = removed;
-            document.getElementById('unchangedCount').textContent = unchanged;
         }
         
         function escapeHtml(text) {
