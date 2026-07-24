@@ -287,15 +287,15 @@
             <div class="stats">
                 <div class="stat-box">
                     <div class="stat-number" id="addedCount">0</div>
-                    <div class="stat-label">Words Added</div>
+                    <div class="stat-label">Characters Added</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-number" id="removedCount">0</div>
-                    <div class="stat-label">Words Removed</div>
+                    <div class="stat-label">Characters Removed</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-number" id="unchangedCount">0</div>
-                    <div class="stat-label">Words Unchanged</div>
+                    <div class="stat-label">Characters Unchanged</div>
                 </div>
             </div>
             
@@ -335,7 +335,8 @@
             const words1 = text1.split(/(\s+)/);
             const words2 = text2.split(/(\s+)/);
             
-            currentDiff = computeDiff(words1, words2);
+            const wordDiff = computeDiff(words1, words2);
+            currentDiff = refineDiff(wordDiff);
             currentView = 'unified';
             
             updateDisplay();
@@ -488,6 +489,85 @@
             return result;
         }
 
+        // Takes a word-level diff and refines any contiguous removed/added
+        // "replacement" blocks into a character-level diff, so a single
+        // changed letter (or a missing apostrophe/comma) is highlighted on
+        // its own instead of the whole word.
+        function refineDiff(diff) {
+            const refined = [];
+            let i = 0;
+
+            while (i < diff.length) {
+                if (diff[i].type === 'unchanged') {
+                    refined.push(diff[i]);
+                    i++;
+                    continue;
+                }
+
+                // Gather a contiguous run of removed/added items (a replacement block)
+                let removedText = '';
+                let addedText = '';
+                let j = i;
+                while (j < diff.length && diff[j].type !== 'unchanged') {
+                    if (diff[j].type === 'removed') removedText += diff[j].value;
+                    else if (diff[j].type === 'added') addedText += diff[j].value;
+                    j++;
+                }
+
+                if (removedText && addedText && isSimilar(removedText, addedText)) {
+                    // Words are close variants of each other (typo, missing
+                    // punctuation, pluralization) - refine to character level
+                    const charDiff = computeDiff(removedText.split(''), addedText.split(''));
+                    refined.push(...mergeConsecutive(charDiff));
+                } else {
+                    // Either a pure deletion/insertion, or the words are
+                    // essentially unrelated - highlight the whole word(s)
+                    if (removedText) refined.push({ type: 'removed', value: removedText });
+                    if (addedText) refined.push({ type: 'added', value: addedText });
+                }
+
+                i = j;
+            }
+
+            return refined;
+        }
+
+        // Decides whether two replaced words are close variants of each
+        // other (worth a character-level diff) or essentially different
+        // words (should just be highlighted whole). Based on shared
+        // prefix + suffix rather than LCS, since LCS can find scattered
+        // matching letters even between completely unrelated words
+        // (e.g. "final" vs "contractor" both contain 'n' and 'a').
+        function isSimilar(a, b) {
+            const maxLen = Math.max(a.length, b.length);
+            if (maxLen === 0) return false;
+
+            let prefix = 0;
+            while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
+
+            let suffix = 0;
+            while (suffix < (a.length - prefix) && suffix < (b.length - prefix) &&
+                   a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) suffix++;
+
+            const matched = prefix + suffix;
+            return (matched / maxLen) >= 0.5;
+        }
+
+        // Merges consecutive diff items of the same type into one, so the
+        // character-level diff doesn't produce a separate span per character
+        function mergeConsecutive(items) {
+            const merged = [];
+            for (const item of items) {
+                const last = merged[merged.length - 1];
+                if (last && last.type === item.type) {
+                    last.value += item.value;
+                } else {
+                    merged.push({ type: item.type, value: item.value });
+                }
+            }
+            return merged;
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -496,11 +576,12 @@
 
         function updateDisplay() {
             renderView(currentView);
-            let added=0, removed=0, unchanged=0;
+            let added = 0, removed = 0, unchanged = 0;
             currentDiff.forEach(item => {
-                if (item.type==='unchanged' && item.value.trim()) unchanged++;
-                else if (item.type==='removed' && item.value.trim()) removed++;
-                else if (item.type==='added' && item.value.trim()) added++;
+                const len = item.value.replace(/\s/g, '').length;
+                if (item.type === 'unchanged') unchanged += len;
+                else if (item.type === 'removed') removed += len;
+                else if (item.type === 'added') added += len;
             });
             document.getElementById('addedCount').textContent = added;
             document.getElementById('removedCount').textContent = removed;
