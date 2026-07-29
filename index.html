@@ -149,6 +149,56 @@
             color: white;
             border-color: #333;
         }
+
+        .export-btn {
+            background: white;
+            color: #155724;
+            border: 1px solid #a3cfa8;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: auto;
+        }
+
+        .export-btn:hover {
+            background: #d4edda;
+        }
+
+        .export-btn:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .loading-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+            color: #333;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+        }
+
+        .loading-indicator.visible {
+            display: flex;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #ddd;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         
         .diff-unified {
             background: #fafafa;
@@ -282,6 +332,11 @@
         <div class="button-section">
             <button onclick="compareDiff()">Compare Texts</button>
         </div>
+
+        <div class="loading-indicator" id="loadingIndicator">
+            <div class="spinner"></div>
+            <span id="loadingTime">0 ms</span>
+        </div>
         
         <div class="results" id="results">
             <div class="stats">
@@ -305,6 +360,7 @@
                     <button class="view-btn" data-view="original" onclick="setView('original')">Original (Removed)</button>
                     <button class="view-btn" data-view="modified" onclick="setView('modified')">Modified (Added)</button>
                     <button class="view-btn" data-view="sidebyside" onclick="setView('sidebyside')">Side by Side</button>
+                    <button class="export-btn" id="exportBtn" onclick="exportToPDF()">📄 Export to PDF</button>
                 </div>
                 <div class="diff-unified" id="diffDisplay">
                     <h3 id="viewTitle">Unified Comparison</h3>
@@ -320,6 +376,151 @@
         let originalLines = [];
         let modifiedLines = [];
 
+        let diffWorker = null;
+        let loadingInterval = null;
+        let loadingStartTime = 0;
+
+        // Builds (once) a Web Worker that runs the diff off the main thread,
+        // so the page stays responsive and the elapsed-time counter can
+        // actually update live while the comparison runs. The worker trims
+        // any identical prefix/suffix between the two texts before running
+        // the O(n*m) word-level diff, which is the main speedup: for two
+        // versions of a mostly-unchanged document, only the small differing
+        // middle section needs the expensive comparison.
+        function getDiffWorker() {
+            if (diffWorker) return diffWorker;
+
+            const workerSource = `
+                function computeDiff(arr1, arr2) {
+                    const m = arr1.length, n = arr2.length;
+                    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+                    for (let i = 1; i <= m; i++)
+                        for (let j = 1; j <= n; j++)
+                            dp[i][j] = (arr1[i-1] === arr2[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+
+                    const result = [];
+                    let i = m, j = n;
+                    while (i > 0 || j > 0) {
+                        if (i > 0 && j > 0 && arr1[i-1] === arr2[j-1]) { result.unshift({type:'unchanged', value: arr1[i-1]}); i--; j--; }
+                        else if (j > 0 && (i===0 || dp[i][j-1]>=dp[i-1][j])) { result.unshift({type:'added', value: arr2[j-1]}); j--; }
+                        else if (i > 0) { result.unshift({type:'removed', value: arr1[i-1]}); i--; }
+                    }
+                    return result;
+                }
+
+                function mergeConsecutive(items) {
+                    const merged = [];
+                    for (const item of items) {
+                        const last = merged[merged.length - 1];
+                        if (last && last.type === item.type) {
+                            last.value += item.value;
+                        } else {
+                            merged.push({ type: item.type, value: item.value });
+                        }
+                    }
+                    return merged;
+                }
+
+                function isSimilar(a, b) {
+                    const maxLen = Math.max(a.length, b.length);
+                    if (maxLen === 0) return false;
+                    let prefix = 0;
+                    while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
+                    let suffix = 0;
+                    while (suffix < (a.length - prefix) && suffix < (b.length - prefix) &&
+                           a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) suffix++;
+                    const matched = prefix + suffix;
+                    return (matched / maxLen) >= 0.5;
+                }
+
+                function refineDiff(diff) {
+                    const refined = [];
+                    let i = 0;
+                    while (i < diff.length) {
+                        if (diff[i].type === 'unchanged') {
+                            refined.push(diff[i]);
+                            i++;
+                            continue;
+                        }
+                        let removedText = '';
+                        let addedText = '';
+                        let j = i;
+                        while (j < diff.length && diff[j].type !== 'unchanged') {
+                            if (diff[j].type === 'removed') removedText += diff[j].value;
+                            else if (diff[j].type === 'added') addedText += diff[j].value;
+                            j++;
+                        }
+                        if (removedText && addedText && isSimilar(removedText, addedText)) {
+                            const charDiff = computeDiff(removedText.split(''), addedText.split(''));
+                            refined.push(...mergeConsecutive(charDiff));
+                        } else {
+                            if (removedText) refined.push({ type: 'removed', value: removedText });
+                            if (addedText) refined.push({ type: 'added', value: addedText });
+                        }
+                        i = j;
+                    }
+                    return refined;
+                }
+
+                function trimCommon(arr1, arr2) {
+                    let start = 0;
+                    const minLen = Math.min(arr1.length, arr2.length);
+                    while (start < minLen && arr1[start] === arr2[start]) start++;
+
+                    let end1 = arr1.length, end2 = arr2.length;
+                    while (end1 > start && end2 > start && arr1[end1 - 1] === arr2[end2 - 1]) {
+                        end1--; end2--;
+                    }
+
+                    return {
+                        prefix: arr1.slice(0, start),
+                        suffix: arr1.slice(end1),
+                        mid1: arr1.slice(start, end1),
+                        mid2: arr2.slice(start, end2)
+                    };
+                }
+
+                self.onmessage = function(e) {
+                    const { words1, words2 } = e.data;
+                    const trimmed = trimCommon(words1, words2);
+                    const midDiff = computeDiff(trimmed.mid1, trimmed.mid2);
+                    const refinedMid = refineDiff(midDiff);
+                    const prefixItems = trimmed.prefix.map(v => ({ type: 'unchanged', value: v }));
+                    const suffixItems = trimmed.suffix.map(v => ({ type: 'unchanged', value: v }));
+                    const full = prefixItems.concat(refinedMid, suffixItems);
+                    self.postMessage(full);
+                };
+            `;
+
+            const blob = new Blob([workerSource], { type: 'application/javascript' });
+            diffWorker = new Worker(URL.createObjectURL(blob));
+            return diffWorker;
+        }
+
+        function formatElapsed(ms) {
+            if (ms < 1000) return `${Math.round(ms)} ms`;
+            return `${(ms / 1000).toFixed(2)} s`;
+        }
+
+        function showLoading() {
+            const indicator = document.getElementById('loadingIndicator');
+            const timeLabel = document.getElementById('loadingTime');
+            indicator.classList.add('visible');
+            loadingStartTime = performance.now();
+            timeLabel.textContent = '0 ms';
+            loadingInterval = setInterval(() => {
+                timeLabel.textContent = formatElapsed(performance.now() - loadingStartTime);
+            }, 50);
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingIndicator').classList.remove('visible');
+            if (loadingInterval) {
+                clearInterval(loadingInterval);
+                loadingInterval = null;
+            }
+        }
+
         function compareDiff() {
             const text1 = document.getElementById('text1').value;
             const text2 = document.getElementById('text2').value;
@@ -334,16 +535,47 @@
             
             const words1 = text1.split(/(\s+)/);
             const words2 = text2.split(/(\s+)/);
-            
-            const wordDiff = computeDiff(words1, words2);
-            currentDiff = refineDiff(wordDiff);
-            currentView = 'unified';
-            
-            updateDisplay();
-            document.getElementById('results').classList.add('visible');
-            
-            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector('[data-view="unified"]').classList.add('active');
+
+            document.getElementById('results').classList.remove('visible');
+            showLoading();
+
+            const finishCompare = () => {
+                hideLoading();
+                currentView = 'unified';
+                updateDisplay();
+                document.getElementById('results').classList.add('visible');
+                document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelector('[data-view="unified"]').classList.add('active');
+            };
+
+            if (window.Worker) {
+                try {
+                    const worker = getDiffWorker();
+                    worker.onmessage = (e) => {
+                        currentDiff = e.data;
+                        finishCompare();
+                    };
+                    worker.onerror = (err) => {
+                        console.error('Diff worker error, falling back to main thread:', err);
+                        const wordDiff = computeDiff(words1, words2);
+                        currentDiff = refineDiff(wordDiff);
+                        finishCompare();
+                    };
+                    worker.postMessage({ words1, words2 });
+                    return;
+                } catch (err) {
+                    console.error('Could not start diff worker, falling back to main thread:', err);
+                }
+            }
+
+            // Fallback (no Worker support, e.g. very old browsers): still
+            // yield a tick so the loading indicator paints before the
+            // (blocking) computation runs.
+            setTimeout(() => {
+                const wordDiff = computeDiff(words1, words2);
+                currentDiff = refineDiff(wordDiff);
+                finishCompare();
+            }, 0);
         }
 
         function setView(view) {
@@ -574,6 +806,75 @@
             return div.innerHTML;
         }
 
+        // Loads html2pdf.js on demand (only when Export to PDF is first clicked)
+        // instead of blocking the page on load with a <script> tag in <head>.
+        let html2pdfLoadPromise = null;
+        function loadHtml2Pdf() {
+            if (window.html2pdf) return Promise.resolve();
+            if (html2pdfLoadPromise) return html2pdfLoadPromise;
+
+            html2pdfLoadPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = () => resolve();
+                script.onerror = () => {
+                    html2pdfLoadPromise = null;
+                    reject(new Error('Failed to load PDF export library'));
+                };
+                document.head.appendChild(script);
+            });
+
+            return html2pdfLoadPromise;
+        }
+
+        async function exportToPDF() {
+            const element = document.getElementById('diffDisplay');
+            const btn = document.getElementById('exportBtn');
+            if (!element || !currentDiff.length) return;
+
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Loading PDF tool…';
+
+            try {
+                await loadHtml2Pdf();
+            } catch (err) {
+                console.error(err);
+                btn.disabled = false;
+                btn.textContent = originalText;
+                alert('Sorry, the PDF export tool failed to load. Check your connection and try again.');
+                return;
+            }
+
+            btn.textContent = 'Exporting…';
+
+            const opt = {
+                margin: 10,
+                filename: `text-diff-${currentView}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: {
+                    unit: 'mm',
+                    format: 'a4',
+                    // Side-by-side has two columns, so give it more width
+                    orientation: currentView === 'sidebyside' ? 'landscape' : 'portrait'
+                },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(element).save()
+                .then(() => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                })
+                .catch((err) => {
+                    console.error('PDF export failed:', err);
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    alert('Sorry, something went wrong exporting the PDF.');
+                });
+        }
+
         function updateDisplay() {
             renderView(currentView);
             let added = 0, removed = 0, unchanged = 0;
@@ -587,6 +888,15 @@
             document.getElementById('removedCount').textContent = removed;
             document.getElementById('unchangedCount').textContent = unchanged;
         }
+        // Start downloading the PDF export library in the background as soon
+        // as the page loads. This doesn't block rendering or the Compare
+        // button - it's just a dynamically inserted script tag. If the user
+        // clicks Export before it's done, exportToPDF() will just wait on
+        // this same promise instead of starting a fresh download.
+        loadHtml2Pdf().catch(() => {
+            // Fail silently here; exportToPDF() will retry and surface
+            // an error to the user if it's still unavailable at that point.
+        });
     </script>
 </body>
 </html>
