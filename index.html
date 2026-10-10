@@ -10,14 +10,27 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
+        :root {
+            --added-bg: #d4edda;
+            --added-fg: #155724;
+            --added-underline: #8fc79a;
+            --removed-bg: #f8d7da;
+            --removed-fg: #721c24;
+            --removed-underline: #e8a0a8;
+            --gutter-fg: #999;
+            --gutter-bg: #f0f0f0;
+            --border: #e0e0e0;
+            --accent: #333;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f5f5;
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -25,46 +38,46 @@
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             overflow: hidden;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--border);
         }
-        
+
         header {
             background: white;
             color: #333;
             padding: 30px;
             text-align: center;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 2px solid var(--border);
         }
-        
+
         h1 {
             font-size: 2em;
             margin-bottom: 10px;
             color: #333;
         }
-        
+
         header p {
             color: #666;
         }
-        
+
         .input-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             padding: 30px;
         }
-        
+
         .input-group {
             display: flex;
             flex-direction: column;
         }
-        
+
         label {
             font-weight: 600;
             margin-bottom: 10px;
             color: #333;
             font-size: 1.1em;
         }
-        
+
         textarea {
             width: 100%;
             height: 200px;
@@ -76,19 +89,23 @@
             resize: vertical;
             transition: border-color 0.3s;
         }
-        
+
         textarea:focus {
             outline: none;
             border-color: #999;
         }
-        
+
         .button-section {
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
             padding: 0 30px 30px;
+            flex-wrap: wrap;
         }
-        
+
         button {
-            background: #333;
+            background: var(--accent);
             color: white;
             border: none;
             padding: 15px 40px;
@@ -96,42 +113,55 @@
             font-weight: 600;
             border-radius: 8px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
         }
-        
+
         button:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
             background: #555;
         }
-        
+
         button:active {
             transform: translateY(0);
         }
-        
+
+        button.secondary {
+            background: white;
+            color: var(--accent);
+            border: 2px solid #ddd;
+            padding: 13px 24px;
+        }
+
+        button.secondary:hover {
+            background: #f5f5f5;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+
         .results {
             padding: 30px;
             background: white;
             border-top: 2px solid #e9ecef;
             display: none;
         }
-        
+
         .results.visible {
             display: block;
         }
-        
+
         .diff-container {
             margin-top: 20px;
         }
-        
+
         .view-buttons {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
             justify-content: center;
             flex-wrap: wrap;
+            align-items: center;
         }
-        
+
         .view-btn {
             background: white;
             color: #333;
@@ -143,11 +173,17 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
+        .view-btn:hover {
+            background: #f5f5f5;
+            transform: none;
+            box-shadow: none;
+        }
+
         .view-btn.active {
-            background: #333;
+            background: var(--accent);
             color: white;
-            border-color: #333;
+            border-color: var(--accent);
         }
 
         .export-btn {
@@ -165,6 +201,8 @@
 
         .export-btn:hover {
             background: #d4edda;
+            transform: none;
+            box-shadow: none;
         }
 
         .export-btn:disabled {
@@ -199,58 +237,83 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
+
         .diff-unified {
             background: #fafafa;
             border-radius: 8px;
             padding: 20px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--border);
         }
-        
+
         .diff-unified h3 {
             margin-bottom: 15px;
             color: #333;
             font-size: 1.2em;
         }
-        
+
         .side-by-side {
             display: flex;
             gap: 20px;
             align-items: start;
         }
-        
+
         .side-panel {
             background: #fafafa;
             border-radius: 8px;
             padding: 20px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--border);
             flex: 1;
+            min-width: 0;
+            overflow: hidden;
         }
-        
+
         .side-panel h3 {
             margin-bottom: 15px;
             color: #333;
             font-size: 1.2em;
         }
-        
+
         .text-segment {
             font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 2;
+            font-size: 13px;
+            line-height: 1.7;
             white-space: pre-wrap;
             word-wrap: break-word;
-            display: inline-block;
+            display: block;
             width: 100%;
-            vertical-align: top;
             transition: background-color 0.2s;
-            padding: 4px 0;
             cursor: pointer;
+            border-radius: 4px;
         }
-        
+
         .text-segment.highlight {
             background-color: #ffffcc;
         }
-        
+
+        .seg-row {
+            display: flex;
+            align-items: flex-start;
+            min-height: 1.7em;
+        }
+
+        .seg-gutter {
+            flex: 0 0 3em;
+            text-align: right;
+            padding-right: 8px;
+            color: var(--gutter-fg);
+            background: var(--gutter-bg);
+            user-select: none;
+            border-right: 1px solid var(--border);
+            margin-right: 8px;
+            font-size: 12px;
+        }
+
+        .seg-content {
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+        }
+
         .diff-content {
             font-family: 'Courier New', monospace;
             font-size: 14px;
@@ -258,54 +321,314 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
-        
+
         .added {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 2px 4px;
-            border-radius: 3px;
+            background-color: var(--added-bg);
+            color: var(--added-fg);
+            border-radius: 2px;
+            box-shadow: inset 0 -2px 0 var(--added-underline);
         }
-        
+
         .removed {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 2px 4px;
-            border-radius: 3px;
+            background-color: var(--removed-bg);
+            color: var(--removed-fg);
             text-decoration: line-through;
+            border-radius: 2px;
+            box-shadow: inset 0 -2px 0 var(--removed-underline);
         }
-        
+
+        .ws-marker {
+            color: #b0b0b0;
+            font-style: italic;
+            text-decoration: none !important;
+            display: inline-block;
+            padding: 0 1px;
+        }
+        .added .ws-marker { color: #2d6a3f; }
+        .removed .ws-marker { color: #8b1e2d; }
+
+        .collapsed {
+            color: #777;
+            background: #eef0f2;
+            border: 1px dashed #c8cdd2;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-style: italic;
+            font-size: 0.9em;
+            margin: 0 4px;
+        }
+
         .stats {
             display: flex;
             justify-content: space-around;
             margin-bottom: 20px;
             gap: 15px;
+            flex-wrap: wrap;
         }
-        
+
         .stat-box {
             background: #fafafa;
             padding: 20px;
             border-radius: 8px;
             text-align: center;
             flex: 1;
-            border: 1px solid #e0e0e0;
+            min-width: 140px;
+            border: 1px solid var(--border);
         }
-        
+
         .stat-number {
             font-size: 2em;
             font-weight: bold;
             color: #333;
         }
-        
+
         .stat-label {
             color: #666;
             margin-top: 5px;
             font-size: 0.9em;
         }
-        
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s, transform 0.25s;
+            z-index: 1000;
+            max-width: 90vw;
+        }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error { background: #721c24; }
+        .toast.success { background: #155724; }
+
+        .hint {
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            padding: 0 30px 20px;
+        }
+
+        kbd {
+            background: #eee;
+            border: 1px solid #ccc;
+            border-bottom-width: 2px;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* ---------------- History panel ---------------- */
+        .history {
+            border-top: 2px solid #e9ecef;
+            background: #fbfbfb;
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 30px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .history-header:hover {
+            background: #f3f4f6;
+        }
+
+        .history-header .chevron {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .history.expanded .history-header .chevron {
+            transform: rotate(90deg);
+        }
+
+        .history-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 1em;
+        }
+
+        .history-count {
+            background: #e0e0e0;
+            color: #333;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .history-clear {
+            margin-left: auto;
+            background: transparent;
+            color: #b02a37;
+            border: 1px solid #f1aeb5;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .history-clear:hover {
+            background: #f8d7da;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .history-clear:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .history-body {
+            display: none;
+            padding: 0 30px 24px;
+        }
+
+        .history.expanded .history-body {
+            display: block;
+        }
+
+        .history-empty {
+            color: #888;
+            font-style: italic;
+            font-size: 14px;
+            padding: 6px 0 10px;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 340px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .history-item:hover {
+            border-color: #bbb;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .history-item.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .history-item .meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-item .preview {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 3px;
+        }
+
+        .history-item .preview .arrow {
+            color: #888;
+            margin: 0 6px;
+        }
+
+        .history-item .submeta {
+            font-size: 11px;
+            color: #777;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .history-item .submeta .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .history-item .submeta .add { color: #155724; font-weight: 600; }
+        .history-item .submeta .del { color: #721c24; font-weight: 600; }
+
+        .history-item .actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .history-item .actions button {
+            background: transparent;
+            color: #888;
+            border: none;
+            padding: 4px 8px;
+            font-size: 14px;
+            line-height: 1;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .history-item .actions button:hover {
+            background: #f0f0f0;
+            color: #333;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .history-item .actions button.delete:hover {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
         @media (max-width: 768px) {
-            .input-section,
-            .diff-container {
+            .input-section {
                 grid-template-columns: 1fr;
+            }
+            .side-by-side {
+                flex-direction: column;
+            }
+            .export-btn {
+                margin-left: 0;
+            }
+            .history-header, .history-body {
+                padding-left: 16px;
+                padding-right: 16px;
             }
         }
     </style>
@@ -316,29 +639,31 @@
             <h1>📝 Text Difference Viewer</h1>
             <p>Compare two texts and see the differences highlighted</p>
         </header>
-        
+
         <div class="input-section">
             <div class="input-group">
                 <label for="text1">Text 1 (Original):</label>
                 <textarea id="text1" placeholder="Enter your first text here..."></textarea>
             </div>
-            
+
             <div class="input-group">
                 <label for="text2">Text 2 (Modified):</label>
                 <textarea id="text2" placeholder="Enter your second text here..."></textarea>
             </div>
         </div>
-        
+
         <div class="button-section">
             <button onclick="compareDiff()">Compare Texts</button>
+            <button class="secondary" onclick="swapTexts()" title="Swap the two texts">⇄ Swap</button>
         </div>
+        <div class="hint">Tip: press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> in either textarea to compare.</div>
 
         <div class="loading-indicator" id="loadingIndicator">
             <div class="spinner"></div>
             <span id="loadingTime">0 ms</span>
         </div>
-        
-        <div class="results" id="results">
+
+        <div class="results" id="results" aria-live="polite">
             <div class="stats">
                 <div class="stat-box">
                     <div class="stat-number" id="addedCount">0</div>
@@ -352,149 +677,229 @@
                     <div class="stat-number" id="unchangedCount">0</div>
                     <div class="stat-label">Characters Unchanged</div>
                 </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="similarityPct">—</div>
+                    <div class="stat-label">Similarity</div>
+                </div>
             </div>
-            
+
             <div class="diff-container">
                 <div class="view-buttons">
-                    <button class="view-btn active" data-view="unified" onclick="setView('unified')">Unified Comparison</button>
+                    <button class="view-btn active" data-view="inline" onclick="setView('inline')">Inline</button>
+                    <button class="view-btn" data-view="changes" onclick="setView('changes')">Changes Only</button>
                     <button class="view-btn" data-view="original" onclick="setView('original')">Original (Removed)</button>
                     <button class="view-btn" data-view="modified" onclick="setView('modified')">Modified (Added)</button>
                     <button class="view-btn" data-view="sidebyside" onclick="setView('sidebyside')">Side by Side</button>
-                    <button class="export-btn" id="exportBtn" onclick="exportToPDF()">📄 Export to PDF</button>
+                    <button class="export-btn" id="exportBtn" onclick="exportToPDF()">📄 Export PDF</button>
                 </div>
                 <div class="diff-unified" id="diffDisplay">
-                    <h3 id="viewTitle">Unified Comparison</h3>
+                    <h3 id="viewTitle">Inline Comparison</h3>
                     <div class="diff-content" id="diffUnified"></div>
                 </div>
             </div>
         </div>
+
+        <div class="history" id="historyPanel">
+            <div class="history-header" onclick="toggleHistory()">
+                <span class="chevron">▶</span>
+                <span class="history-title">📚 Comparison History</span>
+                <span class="history-count" id="historyCount">0</span>
+                <button class="history-clear" id="historyClearBtn"
+                        onclick="event.stopPropagation(); clearHistory()">Clear all</button>
+            </div>
+            <div class="history-body">
+                <div class="history-empty" id="historyEmpty">No comparisons yet. Your history will appear here.</div>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
     </div>
 
+    <div class="toast" id="toast"></div>
+
     <script>
-        let currentDiff = [];
-        let currentView = 'unified';
-        let originalLines = [];
-        let modifiedLines = [];
+        // ------------------------------------------------------------------
+        // Configuration
+        // ------------------------------------------------------------------
+        const CONFIG = {
+            maxDpCells: 4_000_000,
+            similarityThreshold: 0.5,
+            minLoadingMs: 180,
+            // For "Changes Only": how many unchanged segments to keep on
+            // each side of a change before collapsing the middle.
+            changesContext: 6,
+            historyLimit: 50,
+            historyStorageKey: 'text-diff-history-v1'
+        };
 
+        // ------------------------------------------------------------------
+        // Shared diff functions (single source of truth for main + worker)
+        // ------------------------------------------------------------------
+        const DIFF_SOURCE = `
+            function computeDiff(arr1, arr2) {
+                const m = arr1.length, n = arr2.length;
+                const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+                for (let i = 1; i <= m; i++)
+                    for (let j = 1; j <= n; j++)
+                        dp[i][j] = (arr1[i-1] === arr2[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+
+                const result = [];
+                let i = m, j = n;
+                while (i > 0 || j > 0) {
+                    if (i > 0 && j > 0 && arr1[i-1] === arr2[j-1]) { result.unshift({type:'unchanged', value: arr1[i-1]}); i--; j--; }
+                    else if (j > 0 && (i===0 || dp[i][j-1]>=dp[i-1][j])) { result.unshift({type:'added', value: arr2[j-1]}); j--; }
+                    else if (i > 0) { result.unshift({type:'removed', value: arr1[i-1]}); i--; }
+                }
+                return result;
+            }
+
+            function mergeConsecutive(items) {
+                const merged = [];
+                for (const item of items) {
+                    const last = merged[merged.length - 1];
+                    if (last && last.type === item.type) {
+                        last.value += item.value;
+                    } else {
+                        merged.push({ type: item.type, value: item.value });
+                    }
+                }
+                return merged;
+            }
+
+            function isSimilar(a, b, threshold) {
+                const maxLen = Math.max(a.length, b.length);
+                if (maxLen === 0) return false;
+                let prefix = 0;
+                while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
+                let suffix = 0;
+                while (suffix < (a.length - prefix) && suffix < (b.length - prefix) &&
+                       a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) suffix++;
+                const matched = prefix + suffix;
+                return (matched / maxLen) >= threshold;
+            }
+
+            function refineDiff(diff, threshold) {
+                const refined = [];
+                let i = 0;
+                while (i < diff.length) {
+                    if (diff[i].type === 'unchanged') {
+                        refined.push(diff[i]);
+                        i++;
+                        continue;
+                    }
+                    let removedText = '';
+                    let addedText = '';
+                    let j = i;
+                    while (j < diff.length && diff[j].type !== 'unchanged') {
+                        if (diff[j].type === 'removed') removedText += diff[j].value;
+                        else if (diff[j].type === 'added') addedText += diff[j].value;
+                        j++;
+                    }
+                    if (removedText && addedText && isSimilar(removedText, addedText, threshold)) {
+                        const charDiff = computeDiff(removedText.split(''), addedText.split(''));
+                        refined.push(...mergeConsecutive(charDiff));
+                    } else {
+                        if (removedText) refined.push({ type: 'removed', value: removedText });
+                        if (addedText) refined.push({ type: 'added', value: addedText });
+                    }
+                    i = j;
+                }
+                return refined;
+            }
+
+            function trimCommon(arr1, arr2) {
+                let start = 0;
+                const minLen = Math.min(arr1.length, arr2.length);
+                while (start < minLen && arr1[start] === arr2[start]) start++;
+
+                let end1 = arr1.length, end2 = arr2.length;
+                while (end1 > start && end2 > start && arr1[end1 - 1] === arr2[end2 - 1]) {
+                    end1--; end2--;
+                }
+
+                return {
+                    prefix: arr1.slice(0, start),
+                    suffix: arr1.slice(end1),
+                    mid1: arr1.slice(start, end1),
+                    mid2: arr2.slice(start, end2)
+                };
+            }
+
+            function blockDiff(arr1, arr2) {
+                return mergeConsecutive([
+                    ...arr1.map(v => ({ type: 'removed', value: v })),
+                    ...arr2.map(v => ({ type: 'added',   value: v }))
+                ]);
+            }
+
+            function runDiff(words1, words2, maxDpCells, threshold) {
+                const trimmed = trimCommon(words1, words2);
+                let midDiff;
+                const cells = (trimmed.mid1.length + 1) * (trimmed.mid2.length + 1);
+                if (cells > maxDpCells) {
+                    midDiff = blockDiff(trimmed.mid1, trimmed.mid2);
+                } else {
+                    midDiff = computeDiff(trimmed.mid1, trimmed.mid2);
+                }
+                const refinedMid = refineDiff(midDiff, threshold);
+                const prefixItems = trimmed.prefix.map(v => ({ type: 'unchanged', value: v }));
+                const suffixItems = trimmed.suffix.map(v => ({ type: 'unchanged', value: v }));
+                return prefixItems.concat(refinedMid, suffixItems);
+            }
+        `;
+
+        (function installMainThreadDiff() {
+            const factory = new Function(DIFF_SOURCE + `
+                return { computeDiff, refineDiff, isSimilar, mergeConsecutive, trimCommon, blockDiff, runDiff };
+            `);
+            window.__diff = factory();
+        })();
+
+        // ------------------------------------------------------------------
+        // Worker
+        // ------------------------------------------------------------------
         let diffWorker = null;
-        let loadingInterval = null;
-        let loadingStartTime = 0;
+        let workerUrl = null;
 
-        // Builds (once) a Web Worker that runs the diff off the main thread,
-        // so the page stays responsive and the elapsed-time counter can
-        // actually update live while the comparison runs. The worker trims
-        // any identical prefix/suffix between the two texts before running
-        // the O(n*m) word-level diff, which is the main speedup: for two
-        // versions of a mostly-unchanged document, only the small differing
-        // middle section needs the expensive comparison.
         function getDiffWorker() {
             if (diffWorker) return diffWorker;
 
-            const workerSource = `
-                function computeDiff(arr1, arr2) {
-                    const m = arr1.length, n = arr2.length;
-                    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-                    for (let i = 1; i <= m; i++)
-                        for (let j = 1; j <= n; j++)
-                            dp[i][j] = (arr1[i-1] === arr2[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
-
-                    const result = [];
-                    let i = m, j = n;
-                    while (i > 0 || j > 0) {
-                        if (i > 0 && j > 0 && arr1[i-1] === arr2[j-1]) { result.unshift({type:'unchanged', value: arr1[i-1]}); i--; j--; }
-                        else if (j > 0 && (i===0 || dp[i][j-1]>=dp[i-1][j])) { result.unshift({type:'added', value: arr2[j-1]}); j--; }
-                        else if (i > 0) { result.unshift({type:'removed', value: arr1[i-1]}); i--; }
-                    }
-                    return result;
-                }
-
-                function mergeConsecutive(items) {
-                    const merged = [];
-                    for (const item of items) {
-                        const last = merged[merged.length - 1];
-                        if (last && last.type === item.type) {
-                            last.value += item.value;
-                        } else {
-                            merged.push({ type: item.type, value: item.value });
-                        }
-                    }
-                    return merged;
-                }
-
-                function isSimilar(a, b) {
-                    const maxLen = Math.max(a.length, b.length);
-                    if (maxLen === 0) return false;
-                    let prefix = 0;
-                    while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
-                    let suffix = 0;
-                    while (suffix < (a.length - prefix) && suffix < (b.length - prefix) &&
-                           a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) suffix++;
-                    const matched = prefix + suffix;
-                    return (matched / maxLen) >= 0.5;
-                }
-
-                function refineDiff(diff) {
-                    const refined = [];
-                    let i = 0;
-                    while (i < diff.length) {
-                        if (diff[i].type === 'unchanged') {
-                            refined.push(diff[i]);
-                            i++;
-                            continue;
-                        }
-                        let removedText = '';
-                        let addedText = '';
-                        let j = i;
-                        while (j < diff.length && diff[j].type !== 'unchanged') {
-                            if (diff[j].type === 'removed') removedText += diff[j].value;
-                            else if (diff[j].type === 'added') addedText += diff[j].value;
-                            j++;
-                        }
-                        if (removedText && addedText && isSimilar(removedText, addedText)) {
-                            const charDiff = computeDiff(removedText.split(''), addedText.split(''));
-                            refined.push(...mergeConsecutive(charDiff));
-                        } else {
-                            if (removedText) refined.push({ type: 'removed', value: removedText });
-                            if (addedText) refined.push({ type: 'added', value: addedText });
-                        }
-                        i = j;
-                    }
-                    return refined;
-                }
-
-                function trimCommon(arr1, arr2) {
-                    let start = 0;
-                    const minLen = Math.min(arr1.length, arr2.length);
-                    while (start < minLen && arr1[start] === arr2[start]) start++;
-
-                    let end1 = arr1.length, end2 = arr2.length;
-                    while (end1 > start && end2 > start && arr1[end1 - 1] === arr2[end2 - 1]) {
-                        end1--; end2--;
-                    }
-
-                    return {
-                        prefix: arr1.slice(0, start),
-                        suffix: arr1.slice(end1),
-                        mid1: arr1.slice(start, end1),
-                        mid2: arr2.slice(start, end2)
-                    };
-                }
-
+            const workerSource = DIFF_SOURCE + `
                 self.onmessage = function(e) {
-                    const { words1, words2 } = e.data;
-                    const trimmed = trimCommon(words1, words2);
-                    const midDiff = computeDiff(trimmed.mid1, trimmed.mid2);
-                    const refinedMid = refineDiff(midDiff);
-                    const prefixItems = trimmed.prefix.map(v => ({ type: 'unchanged', value: v }));
-                    const suffixItems = trimmed.suffix.map(v => ({ type: 'unchanged', value: v }));
-                    const full = prefixItems.concat(refinedMid, suffixItems);
-                    self.postMessage(full);
+                    const { words1, words2, maxDpCells, threshold } = e.data;
+                    try {
+                        const full = runDiff(words1, words2, maxDpCells, threshold);
+                        self.postMessage({ ok: true, diff: full });
+                    } catch (err) {
+                        self.postMessage({ ok: false, error: String(err && err.message || err) });
+                    }
                 };
             `;
 
             const blob = new Blob([workerSource], { type: 'application/javascript' });
-            diffWorker = new Worker(URL.createObjectURL(blob));
+            workerUrl = URL.createObjectURL(blob);
+            diffWorker = new Worker(workerUrl);
             return diffWorker;
+        }
+
+        // ------------------------------------------------------------------
+        // State
+        // ------------------------------------------------------------------
+        let currentDiff = [];
+        let currentView = 'inline';
+        let loadingInterval = null;
+        let loadingStartTime = 0;
+        let loadingHideTimer = null;
+        let resizeHandler = null;
+        let history = [];               // array of entry objects
+        let currentHistoryId = null;    // id of the entry currently shown
+
+        // ------------------------------------------------------------------
+        // Utilities
+        // ------------------------------------------------------------------
+        const _escapeDiv = document.createElement('div');
+        function escapeHtml(text) {
+            _escapeDiv.textContent = text;
+            return _escapeDiv.innerHTML;
         }
 
         function formatElapsed(ms) {
@@ -502,9 +907,213 @@
             return `${(ms / 1000).toFixed(2)} s`;
         }
 
+        let toastTimer = null;
+        function showToast(msg, kind = '') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast visible ' + kind;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('visible'), 3200);
+        }
+
+        function escapeRegExpSafe(s) { return s; } // placeholder, unused
+
+        // ------------------------------------------------------------------
+        // History (localStorage-backed)
+        // ------------------------------------------------------------------
+        function loadHistory() {
+            try {
+                const raw = localStorage.getItem(CONFIG.historyStorageKey);
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed)) return [];
+                // Basic validation so a corrupted entry doesn't break the UI.
+                return parsed.filter(e =>
+                    e && typeof e === 'object' &&
+                    typeof e.id === 'string' &&
+                    typeof e.text1 === 'string' &&
+                    typeof e.text2 === 'string' &&
+                    Array.isArray(e.diff)
+                );
+            } catch (err) {
+                console.warn('Could not load history:', err);
+                return [];
+            }
+        }
+
+        function saveHistory() {
+            try {
+                localStorage.setItem(CONFIG.historyStorageKey, JSON.stringify(history));
+            } catch (err) {
+                // Quota exceeded or storage disabled — degrade gracefully.
+                console.warn('Could not save history:', err);
+                showToast('History is full — oldest entries were dropped.', 'error');
+                // Trim and retry once.
+                if (history.length > 10) {
+                    history = history.slice(0, 10);
+                    try {
+                        localStorage.setItem(CONFIG.historyStorageKey, JSON.stringify(history));
+                    } catch (_) { /* give up */ }
+                }
+            }
+        }
+
+        function summarizeDiff(diff) {
+            let added = 0, removed = 0, unchanged = 0;
+            for (const item of diff) {
+                const len = item.value.length;
+                if (item.type === 'unchanged') unchanged += len;
+                else if (item.type === 'removed') removed += len;
+                else if (item.type === 'added') added += len;
+            }
+            const total = added + removed + unchanged;
+            const similarity = total === 0 ? 100 : Math.round((unchanged / total) * 100);
+            return { added, removed, unchanged, similarity };
+        }
+
+        function previewText(s, max = 40) {
+            const oneLine = s.replace(/\s+/g, ' ').trim();
+            if (oneLine.length <= max) return oneLine || '(empty)';
+            return oneLine.slice(0, max - 1) + '…';
+        }
+
+        function relativeTime(ts) {
+            const diff = Date.now() - ts;
+            const sec = Math.round(diff / 1000);
+            if (sec < 5) return 'just now';
+            if (sec < 60) return `${sec}s ago`;
+            const min = Math.round(sec / 60);
+            if (min < 60) return `${min}m ago`;
+            const hr = Math.round(min / 60);
+            if (hr < 24) return `${hr}h ago`;
+            return new Date(ts).toLocaleString();
+        }
+
+        function addHistoryEntry(text1, text2, diff) {
+            const stats = summarizeDiff(diff);
+            const entry = {
+                id: 'h_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+                ts: Date.now(),
+                text1, text2,
+                diff,
+                stats
+            };
+
+            // Dedupe: if the newest entry has the exact same texts, replace it.
+            const newest = history[0];
+            if (newest && newest.text1 === text1 && newest.text2 === text2) {
+                history[0] = { ...entry, id: newest.id };
+                currentHistoryId = newest.id;
+            } else {
+                history.unshift(entry);
+                currentHistoryId = entry.id;
+                if (history.length > CONFIG.historyLimit) {
+                    history = history.slice(0, CONFIG.historyLimit);
+                }
+            }
+            saveHistory();
+            renderHistory();
+        }
+
+        function toggleHistory() {
+            document.getElementById('historyPanel').classList.toggle('expanded');
+            renderHistory(); // refresh relative times when opened
+        }
+
+        function restoreHistoryEntry(id) {
+            const entry = history.find(e => e.id === id);
+            if (!entry) return;
+
+            document.getElementById('text1').value = entry.text1;
+            document.getElementById('text2').value = entry.text2;
+            currentDiff = entry.diff;
+            currentHistoryId = entry.id;
+
+            currentView = 'inline';
+            updateDisplay();
+            document.getElementById('results').classList.add('visible');
+
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            const inlineBtn = document.querySelector('[data-view="inline"]');
+            if (inlineBtn) inlineBtn.classList.add('active');
+
+            renderHistory();
+            // Scroll the results into view so the user sees the restored diff.
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function deleteHistoryEntry(id, evt) {
+            if (evt) evt.stopPropagation();
+            history = history.filter(e => e.id !== id);
+            if (currentHistoryId === id) currentHistoryId = null;
+            saveHistory();
+            renderHistory();
+        }
+
+        function clearHistory() {
+            if (!history.length) return;
+            if (!confirm('Delete all ' + history.length + ' history entries?')) return;
+            history = [];
+            currentHistoryId = null;
+            saveHistory();
+            renderHistory();
+            showToast('History cleared.', 'success');
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            const empty = document.getElementById('historyEmpty');
+            const count = document.getElementById('historyCount');
+            const clearBtn = document.getElementById('historyClearBtn');
+
+            count.textContent = history.length;
+            clearBtn.disabled = history.length === 0;
+
+            if (!history.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            // Build all at once, then attach listeners by id (avoids inline handlers
+            // re-binding problems if we were to render incrementally).
+            const html = history.map(entry => {
+                const active = entry.id === currentHistoryId ? ' active' : '';
+                const s = entry.stats;
+                return `
+                    <div class="history-item${active}" data-id="${entry.id}"
+                         onclick="restoreHistoryEntry('${entry.id}')">
+                        <div class="meta">
+                            <div class="preview">
+                                <span>${escapeHtml(previewText(entry.text1))}</span>
+                                <span class="arrow">→</span>
+                                <span>${escapeHtml(previewText(entry.text2))}</span>
+                            </div>
+                            <div class="submeta">
+                                <span class="pill add">+${s.added}</span>
+                                <span class="pill del">−${s.removed}</span>
+                                <span class="pill">${s.similarity}% similar</span>
+                                <span class="pill">${relativeTime(entry.ts)}</span>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="delete" title="Delete this entry"
+                                    onclick="deleteHistoryEntry('${entry.id}', event)">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            list.innerHTML = html;
+        }
+
+        // ------------------------------------------------------------------
+        // Loading indicator
+        // ------------------------------------------------------------------
         function showLoading() {
             const indicator = document.getElementById('loadingIndicator');
             const timeLabel = document.getElementById('loadingTime');
+            clearTimeout(loadingHideTimer);
             indicator.classList.add('visible');
             loadingStartTime = performance.now();
             timeLabel.textContent = '0 ms';
@@ -514,25 +1123,30 @@
         }
 
         function hideLoading() {
-            document.getElementById('loadingIndicator').classList.remove('visible');
-            if (loadingInterval) {
-                clearInterval(loadingInterval);
-                loadingInterval = null;
-            }
+            const elapsed = performance.now() - loadingStartTime;
+            const delay = Math.max(0, CONFIG.minLoadingMs - elapsed);
+            clearTimeout(loadingHideTimer);
+            loadingHideTimer = setTimeout(() => {
+                document.getElementById('loadingIndicator').classList.remove('visible');
+                if (loadingInterval) {
+                    clearInterval(loadingInterval);
+                    loadingInterval = null;
+                }
+            }, delay);
         }
 
+        // ------------------------------------------------------------------
+        // Compare
+        // ------------------------------------------------------------------
         function compareDiff() {
             const text1 = document.getElementById('text1').value;
             const text2 = document.getElementById('text2').value;
-            
+
             if (!text1 && !text2) {
-                alert('Please enter text in both fields');
+                showToast('Please enter text in at least one field', 'error');
                 return;
             }
-            
-            originalLines = text1.split('\n');
-            modifiedLines = text2.split('\n');
-            
+
             const words1 = text1.split(/(\s+)/);
             const words2 = text2.split(/(\s+)/);
 
@@ -541,141 +1155,302 @@
 
             const finishCompare = () => {
                 hideLoading();
-                currentView = 'unified';
+                currentView = 'inline';
                 updateDisplay();
                 document.getElementById('results').classList.add('visible');
                 document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-                document.querySelector('[data-view="unified"]').classList.add('active');
+                document.querySelector('[data-view="inline"]').classList.add('active');
+                addHistoryEntry(text1, text2, currentDiff);
+            };
+
+            const onSuccess = (diff) => {
+                currentDiff = diff;
+                finishCompare();
+            };
+
+            const onFailure = (err) => {
+                console.warn('Worker diff failed, falling back to main thread:', err);
+                try {
+                    const diff = window.__diff.runDiff(
+                        words1, words2, CONFIG.maxDpCells, CONFIG.similarityThreshold
+                    );
+                    onSuccess(diff);
+                } catch (innerErr) {
+                    hideLoading();
+                    console.error(innerErr);
+                    showToast('Comparison failed: ' + (innerErr.message || innerErr), 'error');
+                }
             };
 
             if (window.Worker) {
                 try {
                     const worker = getDiffWorker();
                     worker.onmessage = (e) => {
-                        currentDiff = e.data;
-                        finishCompare();
+                        if (e.data && e.data.ok) onSuccess(e.data.diff);
+                        else onFailure(e.data && e.data.error);
                     };
                     worker.onerror = (err) => {
-                        console.error('Diff worker error, falling back to main thread:', err);
-                        const wordDiff = computeDiff(words1, words2);
-                        currentDiff = refineDiff(wordDiff);
-                        finishCompare();
+                        err.preventDefault && err.preventDefault();
+                        onFailure(err.message || 'worker error');
                     };
-                    worker.postMessage({ words1, words2 });
+                    worker.postMessage({
+                        words1, words2,
+                        maxDpCells: CONFIG.maxDpCells,
+                        threshold: CONFIG.similarityThreshold
+                    });
                     return;
                 } catch (err) {
-                    console.error('Could not start diff worker, falling back to main thread:', err);
+                    onFailure(err);
+                    return;
                 }
             }
 
-            // Fallback (no Worker support, e.g. very old browsers): still
-            // yield a tick so the loading indicator paints before the
-            // (blocking) computation runs.
             setTimeout(() => {
-                const wordDiff = computeDiff(words1, words2);
-                currentDiff = refineDiff(wordDiff);
-                finishCompare();
+                try {
+                    const diff = window.__diff.runDiff(
+                        words1, words2, CONFIG.maxDpCells, CONFIG.similarityThreshold
+                    );
+                    onSuccess(diff);
+                } catch (err) {
+                    onFailure(err);
+                }
             }, 0);
         }
 
+        function swapTexts() {
+            const a = document.getElementById('text1');
+            const b = document.getElementById('text2');
+            const tmp = a.value;
+            a.value = b.value;
+            b.value = tmp;
+            if (currentDiff.length) compareDiff();
+        }
+
+        // ------------------------------------------------------------------
+        // View switching
+        // ------------------------------------------------------------------
         function setView(view) {
             currentView = view;
             renderView(view);
-            
             document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelector(`[data-view="${view}"]`).classList.add('active');
         }
 
         function renderView(view) {
             const displayElement = document.getElementById('diffDisplay');
-            
+
             if (view === 'sidebyside') {
                 displayElement.innerHTML = renderSideBySide();
+                scheduleAlign();
             } else {
-                let html = '<h3 id="viewTitle"></h3><div class="diff-content" id="diffUnified"></div>';
-                displayElement.innerHTML = html;
-                
-                const titleElement = document.getElementById('viewTitle');
-                let content = '';
-                
-                if (view === 'unified') {
-                    titleElement.textContent = 'Unified Comparison';
-                    currentDiff.forEach(item => {
-                        const value = escapeHtml(item.value);
-                        if (item.type === 'unchanged') content += value;
-                        else if (item.type === 'removed') content += `<span class="removed">${value}</span>`;
-                        else if (item.type === 'added') content += `<span class="added">${value}</span>`;
-                    });
-                } else if (view === 'original') {
-                    titleElement.textContent = 'Original Text (Showing Removed)';
-                    currentDiff.forEach(item => {
-                        const value = escapeHtml(item.value);
-                        if (item.type === 'removed') content += `<span class="removed">${value}</span>`;
-                        else if (item.type === 'unchanged') content += value;
-                    });
-                } else if (view === 'modified') {
-                    titleElement.textContent = 'Modified Text (Showing Added)';
-                    currentDiff.forEach(item => {
-                        const value = escapeHtml(item.value);
-                        if (item.type === 'added') content += `<span class="added">${value}</span>`;
-                        else if (item.type === 'unchanged') content += value;
-                    });
+                const titles = {
+                    inline: 'Inline Comparison',
+                    changes: 'Changes Only',
+                    original: 'Original Text (Showing Removed)',
+                    modified: 'Modified Text (Showing Added)'
+                };
+                displayElement.innerHTML =
+                    `<h3 id="viewTitle">${titles[view] || 'Comparison'}</h3>` +
+                    `<div class="diff-content" id="diffUnified"></div>`;
+
+                const container = document.getElementById('diffUnified');
+                if (view === 'changes') {
+                    container.innerHTML = buildChangesOnlyHtml();
+                } else {
+                    container.innerHTML = buildUnifiedHtml(view);
                 }
-                
-                document.getElementById('diffUnified').innerHTML = content;
             }
         }
 
+        function buildUnifiedHtml(view) {
+            let html = '';
+            for (const item of currentDiff) {
+                if (item.type === 'unchanged') {
+                    html += escapeHtml(item.value);
+                } else if (item.type === 'removed') {
+                    if (view === 'inline' || view === 'original') {
+                        html += renderDiffSpan(item);
+                    }
+                } else if (item.type === 'added') {
+                    if (view === 'inline' || view === 'modified') {
+                        html += renderDiffSpan(item);
+                    }
+                }
+            }
+            return html;
+        }
+
+        // ------------------------------------------------------------------
+        // "Changes Only" view
+        //
+        // Walks the diff and collapses long runs of consecutive unchanged
+        // items into a `… N unchanged segments …` marker, keeping
+        // CONFIG.changesContext items of context on each side of every
+        // change. Unchanged runs that contain newlines are treated more
+        // aggressively (collapsed to a single marker) since a long stretch
+        // of untouched text is exactly what the user wants gone.
+        // ------------------------------------------------------------------
+        function buildChangesOnlyHtml() {
+            const CONTEXT = CONFIG.changesContext;
+            if (!currentDiff.length) return '';
+
+            // First pass: group currentDiff into runs of unchanged / changed.
+            const blocks = [];
+            let i = 0;
+            while (i < currentDiff.length) {
+                const type = currentDiff[i].type === 'unchanged' ? 'unchanged' : 'changed';
+                let j = i;
+                while (j < currentDiff.length &&
+                       (currentDiff[j].type === 'unchanged') === (type === 'unchanged')) {
+                    j++;
+                }
+                blocks.push({ type, items: currentDiff.slice(i, j) });
+                i = j;
+            }
+
+            // Second pass: emit blocks, collapsing long unchanged runs.
+            // A run is "long" if it has more than 2*CONTEXT segments OR
+            // contains a newline and more than CONTEXT segments.
+            let html = '';
+            for (const block of blocks) {
+                if (block.type === 'changed') {
+                    for (const item of block.items) {
+                        html += renderDiffSpan(item);
+                    }
+                    continue;
+                }
+
+                // Unchanged block. Decide whether to collapse.
+                const hasNewline = block.items.some(it => it.value.includes('\n'));
+                const collapseThreshold = hasNewline ? CONTEXT : CONTEXT * 2;
+                const shouldCollapse = block.items.length > collapseThreshold;
+
+                if (!shouldCollapse) {
+                    for (const item of block.items) {
+                        html += escapeHtml(item.value);
+                    }
+                    continue;
+                }
+
+                // Keep `CONTEXT` items at each end, collapse the middle.
+                const head = block.items.slice(0, CONTEXT);
+                const tail = block.items.slice(block.items.length - CONTEXT);
+                const hidden = block.items.length - head.length - tail.length;
+
+                for (const item of head) html += escapeHtml(item.value);
+                if (hidden > 0) {
+                    // Also count characters hidden, which is more meaningful
+                    // than "segments" for the reader.
+                    const hiddenChars = block.items
+                        .slice(CONTEXT, block.items.length - CONTEXT)
+                        .reduce((sum, it) => sum + it.value.length, 0);
+                    html += `<span class="collapsed" title="${hidden} unchanged segments hidden">… ${hiddenChars} unchanged characters …</span>`;
+                }
+                for (const item of tail) html += escapeHtml(item.value);
+            }
+
+            return html;
+        }
+
+        // ------------------------------------------------------------------
+        // Whitespace-visible diff span
+        // ------------------------------------------------------------------
+        function renderDiffSpan(item) {
+            const raw = item.value;
+            const cls = item.type === 'added' ? 'added' : 'removed';
+            if (raw.trim() === '') {
+                const marked = raw
+                    .replace(/ /g, '<span class="ws-marker">·</span>')
+                    .replace(/\t/g, '<span class="ws-marker">→</span>')
+                    .replace(/\n/g, '<span class="ws-marker">¶</span>\n');
+                return `<span class="${cls}">${marked}</span>`;
+            }
+            return `<span class="${cls}">${escapeHtml(raw)}</span>`;
+        }
+
+        // ------------------------------------------------------------------
+        // Side-by-side
+        // ------------------------------------------------------------------
         function renderSideBySide() {
             const segments = [];
-            let currentSegment = { left: '', right: '' };
-            let inChangeBlock = false;
-            
-            currentDiff.forEach((item, idx) => {
-                const val = escapeHtml(item.value);
-                const isSpace = item.value.trim() === '';
-                
-                if (item.type === 'unchanged') {
-                    if (isSpace) {
-                        currentSegment.left += val;
-                        currentSegment.right += val;
-                    } else {
-                        if (inChangeBlock) {
-                            segments.push(currentSegment);
-                            currentSegment = { left: '', right: '' };
-                            inChangeBlock = false;
-                        }
-                        currentSegment.left += val;
-                        currentSegment.right += val;
-                    }
-                } else {
-                    inChangeBlock = true;
-                    if (item.type === 'removed') currentSegment.left += `<span class="removed">${val}</span>`;
-                    if (item.type === 'added') currentSegment.right += `<span class="added">${val}</span>`;
-                }
-            });
-            
-            if (currentSegment.left || currentSegment.right) segments.push(currentSegment);
+            let current = { left: '', right: '' };
+            let leftLine = 1;
+            let rightLine = 1;
+            let currentLeftStart = 1;
+            let currentRightStart = 1;
 
-            let leftHtml = '<div class="side-panel"><h3>Original (Text 1)</h3><div id="leftPanel">';
-            let rightHtml = '<div class="side-panel"><h3>Modified (Text 2)</h3><div id="rightPanel">';
+            const flushSegment = () => {
+                segments.push({
+                    ...current,
+                    leftStart: currentLeftStart,
+                    rightStart: currentRightStart
+                });
+                current = { left: '', right: '' };
+                currentLeftStart = leftLine;
+                currentRightStart = rightLine;
+            };
+
+            currentLeftStart = leftLine;
+            currentRightStart = rightLine;
+
+            for (const item of currentDiff) {
+                const isWhitespace = item.value.trim() === '';
+                const newlines = (item.value.match(/\n/g) || []).length;
+
+                if (item.type === 'unchanged') {
+                    if (isWhitespace) {
+                        current.left += escapeHtml(item.value);
+                        current.right += escapeHtml(item.value);
+                    } else {
+                        if (current.left || current.right) {
+                            const leftHasChange = /<span/.test(current.left);
+                            const rightHasChange = /<span/.test(current.right);
+                            if (leftHasChange || rightHasChange) flushSegment();
+                        }
+                        current.left += escapeHtml(item.value);
+                        current.right += escapeHtml(item.value);
+                    }
+                    leftLine += newlines;
+                    rightLine += newlines;
+                } else if (item.type === 'removed') {
+                    current.left += renderDiffSpan(item);
+                    leftLine += newlines;
+                } else if (item.type === 'added') {
+                    current.right += renderDiffSpan(item);
+                    rightLine += newlines;
+                }
+            }
+
+            if (current.left || current.right) flushSegment();
+
+            const leftHtml = ['<div class="side-panel"><h3>Original (Text 1)</h3><div>'];
+            const rightHtml = ['<div class="side-panel"><h3>Modified (Text 2)</h3><div>'];
 
             segments.forEach((seg, idx) => {
-                const returnSymbol = (idx < segments.length - 1) ? '↩' : '';
-                leftHtml += `<div class="text-segment" id="left-seg-${idx}" onclick="toggleHighlight(${idx})">${seg.left}${returnSymbol}</div>`;
-                rightHtml += `<div class="text-segment" id="right-seg-${idx}" onclick="toggleHighlight(${idx})">${seg.right}${returnSymbol}</div>`;
+                leftHtml.push(renderSegmentBlock('left', idx, seg.left, seg.leftStart));
+                rightHtml.push(renderSegmentBlock('right', idx, seg.right, seg.rightStart));
             });
 
-            leftHtml += '</div></div>';
-            rightHtml += '</div></div>';
+            leftHtml.push('</div></div>');
+            rightHtml.push('</div></div>');
 
-            setTimeout(() => {
-                alignSegments(segments.length);
-                window.removeEventListener('resize', alignResizeHandler);
-                window.addEventListener('resize', alignResizeHandler);
-            }, 50);
+            return `<div class="side-by-side">${leftHtml.join('')}${rightHtml.join('')}</div>`;
+        }
 
-            return `<div class="side-by-side">${leftHtml}${rightHtml}</div>`;
+        function renderSegmentBlock(side, idx, html, startLine) {
+            const parts = html.split('\n');
+            const rows = parts.map((part, i) => {
+                const lineNo = startLine + i;
+                return `<div class="seg-row">` +
+                    `<div class="seg-gutter">${lineNo}</div>` +
+                    `<div class="seg-content">${part || '&nbsp;'}</div>` +
+                    `</div>`;
+            }).join('');
+            return `<div class="text-segment" id="${side}-seg-${idx}" ` +
+                   `role="button" tabindex="0" ` +
+                   `onclick="toggleHighlight(${idx})" ` +
+                   `onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHighlight(${idx});}">` +
+                   `${rows}</div>`;
         }
 
         function toggleHighlight(idx) {
@@ -685,129 +1460,51 @@
             if (rightSeg) rightSeg.classList.toggle('highlight');
         }
 
-        let alignResizeHandler = () => {
-            const segmentCount = document.querySelectorAll('[id^="left-seg-"]').length;
-            alignSegments(segmentCount);
-        };
+        function scheduleAlign() {
+            requestAnimationFrame(() => {
+                alignSegments();
+                if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+                resizeHandler = () => alignSegments();
+                window.addEventListener('resize', resizeHandler);
+            });
+        }
 
-        function alignSegments(segmentCount) {
-            for (let i = 0; i < segmentCount; i++) {
+        function alignSegments() {
+            const leftSegs = document.querySelectorAll('[id^="left-seg-"]');
+            for (let i = 0; i < leftSegs.length; i++) {
                 const leftSeg = document.getElementById(`left-seg-${i}`);
                 const rightSeg = document.getElementById(`right-seg-${i}`);
                 if (!leftSeg || !rightSeg) continue;
                 leftSeg.style.minHeight = '';
                 rightSeg.style.minHeight = '';
-                void leftSeg.offsetHeight;
+            }
+            void document.body.offsetHeight;
+            for (let i = 0; i < leftSegs.length; i++) {
+                const leftSeg = document.getElementById(`left-seg-${i}`);
+                const rightSeg = document.getElementById(`right-seg-${i}`);
+                if (!leftSeg || !rightSeg) continue;
                 const maxHeight = Math.max(leftSeg.offsetHeight, rightSeg.offsetHeight);
                 leftSeg.style.minHeight = maxHeight + 'px';
                 rightSeg.style.minHeight = maxHeight + 'px';
             }
         }
 
-        function computeDiff(arr1, arr2) {
-            const m = arr1.length, n = arr2.length;
-            const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-            for (let i = 1; i <= m; i++)
-                for (let j = 1; j <= n; j++)
-                    dp[i][j] = (arr1[i-1] === arr2[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+        // ------------------------------------------------------------------
+        // Stats
+        // ------------------------------------------------------------------
+        function updateDisplay() {
+            renderView(currentView);
 
-            const result = [];
-            let i = m, j = n;
-            while (i > 0 || j > 0) {
-                if (i > 0 && j > 0 && arr1[i-1] === arr2[j-1]) { result.unshift({type:'unchanged', value: arr1[i-1]}); i--; j--; }
-                else if (j > 0 && (i===0 || dp[i][j-1]>=dp[i-1][j])) { result.unshift({type:'added', value: arr2[j-1]}); j--; }
-                else if (i > 0) { result.unshift({type:'removed', value: arr1[i-1]}); i--; }
-            }
-            return result;
+            const s = summarizeDiff(currentDiff);
+            document.getElementById('addedCount').textContent = s.added;
+            document.getElementById('removedCount').textContent = s.removed;
+            document.getElementById('unchangedCount').textContent = s.unchanged;
+            document.getElementById('similarityPct').textContent = s.similarity + '%';
         }
 
-        // Takes a word-level diff and refines any contiguous removed/added
-        // "replacement" blocks into a character-level diff, so a single
-        // changed letter (or a missing apostrophe/comma) is highlighted on
-        // its own instead of the whole word.
-        function refineDiff(diff) {
-            const refined = [];
-            let i = 0;
-
-            while (i < diff.length) {
-                if (diff[i].type === 'unchanged') {
-                    refined.push(diff[i]);
-                    i++;
-                    continue;
-                }
-
-                // Gather a contiguous run of removed/added items (a replacement block)
-                let removedText = '';
-                let addedText = '';
-                let j = i;
-                while (j < diff.length && diff[j].type !== 'unchanged') {
-                    if (diff[j].type === 'removed') removedText += diff[j].value;
-                    else if (diff[j].type === 'added') addedText += diff[j].value;
-                    j++;
-                }
-
-                if (removedText && addedText && isSimilar(removedText, addedText)) {
-                    // Words are close variants of each other (typo, missing
-                    // punctuation, pluralization) - refine to character level
-                    const charDiff = computeDiff(removedText.split(''), addedText.split(''));
-                    refined.push(...mergeConsecutive(charDiff));
-                } else {
-                    // Either a pure deletion/insertion, or the words are
-                    // essentially unrelated - highlight the whole word(s)
-                    if (removedText) refined.push({ type: 'removed', value: removedText });
-                    if (addedText) refined.push({ type: 'added', value: addedText });
-                }
-
-                i = j;
-            }
-
-            return refined;
-        }
-
-        // Decides whether two replaced words are close variants of each
-        // other (worth a character-level diff) or essentially different
-        // words (should just be highlighted whole). Based on shared
-        // prefix + suffix rather than LCS, since LCS can find scattered
-        // matching letters even between completely unrelated words
-        // (e.g. "final" vs "contractor" both contain 'n' and 'a').
-        function isSimilar(a, b) {
-            const maxLen = Math.max(a.length, b.length);
-            if (maxLen === 0) return false;
-
-            let prefix = 0;
-            while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
-
-            let suffix = 0;
-            while (suffix < (a.length - prefix) && suffix < (b.length - prefix) &&
-                   a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) suffix++;
-
-            const matched = prefix + suffix;
-            return (matched / maxLen) >= 0.5;
-        }
-
-        // Merges consecutive diff items of the same type into one, so the
-        // character-level diff doesn't produce a separate span per character
-        function mergeConsecutive(items) {
-            const merged = [];
-            for (const item of items) {
-                const last = merged[merged.length - 1];
-                if (last && last.type === item.type) {
-                    last.value += item.value;
-                } else {
-                    merged.push({ type: item.type, value: item.value });
-                }
-            }
-            return merged;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Loads html2pdf.js on demand (only when Export to PDF is first clicked)
-        // instead of blocking the page on load with a <script> tag in <head>.
+        // ------------------------------------------------------------------
+        // PDF export
+        // ------------------------------------------------------------------
         let html2pdfLoadPromise = null;
         function loadHtml2Pdf() {
             if (window.html2pdf) return Promise.resolve();
@@ -842,7 +1539,7 @@
                 console.error(err);
                 btn.disabled = false;
                 btn.textContent = originalText;
-                alert('Sorry, the PDF export tool failed to load. Check your connection and try again.');
+                showToast('PDF export tool failed to load. Check your connection.', 'error');
                 return;
             }
 
@@ -856,46 +1553,45 @@
                 jsPDF: {
                     unit: 'mm',
                     format: 'a4',
-                    // Side-by-side has two columns, so give it more width
                     orientation: currentView === 'sidebyside' ? 'landscape' : 'portrait'
                 },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                pagebreak: { mode: ['css', 'legacy'] }
             };
 
-            html2pdf().set(opt).from(element).save()
-                .then(() => {
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                })
-                .catch((err) => {
-                    console.error('PDF export failed:', err);
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                    alert('Sorry, something went wrong exporting the PDF.');
-                });
+            try {
+                await html2pdf().set(opt).from(element).save();
+                showToast('PDF exported.', 'success');
+            } catch (err) {
+                console.error('PDF export failed:', err);
+                showToast('Sorry, something went wrong exporting the PDF.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
-        function updateDisplay() {
-            renderView(currentView);
-            let added = 0, removed = 0, unchanged = 0;
-            currentDiff.forEach(item => {
-                const len = item.value.replace(/\s/g, '').length;
-                if (item.type === 'unchanged') unchanged += len;
-                else if (item.type === 'removed') removed += len;
-                else if (item.type === 'added') added += len;
+        // ------------------------------------------------------------------
+        // Wiring
+        // ------------------------------------------------------------------
+        document.querySelectorAll('#text1, #text2').forEach(el => {
+            el.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    compareDiff();
+                }
             });
-            document.getElementById('addedCount').textContent = added;
-            document.getElementById('removedCount').textContent = removed;
-            document.getElementById('unchangedCount').textContent = unchanged;
-        }
-        // Start downloading the PDF export library in the background as soon
-        // as the page loads. This doesn't block rendering or the Compare
-        // button - it's just a dynamically inserted script tag. If the user
-        // clicks Export before it's done, exportToPDF() will just wait on
-        // this same promise instead of starting a fresh download.
-        loadHtml2Pdf().catch(() => {
-            // Fail silently here; exportToPDF() will retry and surface
-            // an error to the user if it's still unavailable at that point.
+        });
+
+        // Initialise history from storage and render.
+        history = loadHistory();
+        renderHistory();
+
+        // Pre-warm the PDF library in the background.
+        loadHtml2Pdf().catch(() => {});
+
+        window.addEventListener('beforeunload', () => {
+            if (diffWorker) diffWorker.terminate();
+            if (workerUrl) URL.revokeObjectURL(workerUrl);
         });
     </script>
 </body>
