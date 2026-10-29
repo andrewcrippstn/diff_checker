@@ -721,7 +721,10 @@
         // Configuration
         // ------------------------------------------------------------------
         const CONFIG = {
-            maxDpCells: 4_000_000,
+            // Max edit distance for one diff sub-problem. Far above any realistic
+            // edit; only genuinely unrelated text hits it (and then only that
+            // sub-problem is shown as a block replace).
+            maxEditDistance: 10000,
             similarityThreshold: 0.5,
             minLoadingMs: 180,
             // For "Changes Only": how many unchanged segments to keep on
@@ -735,21 +738,105 @@
         // Shared diff functions (single source of truth for main + worker)
         // ------------------------------------------------------------------
         const DIFF_SOURCE = `
-            function computeDiff(arr1, arr2) {
-                const m = arr1.length, n = arr2.length;
-                const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-                for (let i = 1; i <= m; i++)
-                    for (let j = 1; j <= n; j++)
-                        dp[i][j] = (arr1[i-1] === arr2[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+            // Linear-space Myers diff (O(ND) time, O(N+M) memory). Gives an
+            // exact minimal diff for any realistic text size, so a single edit
+            // near the top of a long document no longer marks everything after
+            // it as changed. Tokens are mapped to integers for fast compares.
+            // maxD caps the edit distance per sub-problem; only a sub-problem
+            // that is genuinely that different falls back to a block replace
+            // (never the whole remainder of the document).
+            function computeDiff(w1, w2, maxD) {
+                if (maxD === undefined) maxD = 1e9;
+                const map = new Map();
+                let nextId = 0;
+                const toId = (s) => {
+                    let v = map.get(s);
+                    if (v === undefined) { v = nextId++; map.set(s, v); }
+                    return v;
+                };
+                const a = new Int32Array(w1.length);
+                const b = new Int32Array(w2.length);
+                for (let i = 0; i < w1.length; i++) a[i] = toId(w1[i]);
+                for (let i = 0; i < w2.length; i++) b[i] = toId(w2[i]);
 
-                const result = [];
-                let i = m, j = n;
-                while (i > 0 || j > 0) {
-                    if (i > 0 && j > 0 && arr1[i-1] === arr2[j-1]) { result.unshift({type:'unchanged', value: arr1[i-1]}); i--; j--; }
-                    else if (j > 0 && (i===0 || dp[i][j-1]>=dp[i-1][j])) { result.unshift({type:'added', value: arr2[j-1]}); j--; }
-                    else if (i > 0) { result.unshift({type:'removed', value: arr1[i-1]}); i--; }
+                const off = a.length + b.length + 2;
+                const vf = new Int32Array(2 * off + 3);
+                const vb = new Int32Array(2 * off + 3);
+                const out = [];
+
+                // Finds the middle snake of the sub-problem a[aLo..aLo+N) vs
+                // b[bLo..bLo+M). Returns [xStart, yStart, xEnd, yEnd] relative
+                // to the sub-problem, or null if the edit distance exceeds maxD.
+                function middle(aLo, N, bLo, M) {
+                    const delta = N - M;
+                    const odd = (delta & 1) !== 0;
+                    const maxHalf = Math.min((N + M + 1) >> 1, maxD);
+                    vf[off + 1] = 0;
+                    vb[off + 1] = 0;
+                    for (let D = 0; D <= maxHalf; D++) {
+                        for (let k = -D; k <= D; k += 2) {
+                            let x;
+                            if (k === -D || (k !== D && vf[off + k - 1] < vf[off + k + 1])) x = vf[off + k + 1];
+                            else x = vf[off + k - 1] + 1;
+                            let y = x - k;
+                            const x0 = x, y0 = y;
+                            while (x < N && y < M && a[aLo + x] === b[bLo + y]) { x++; y++; }
+                            vf[off + k] = x;
+                            if (odd && k >= delta - (D - 1) && k <= delta + (D - 1) &&
+                                x + vb[off + delta - k] >= N && x <= N && y <= M) {
+                                return [x0, y0, x, y];
+                            }
+                        }
+                        for (let k = -D; k <= D; k += 2) {
+                            let x;
+                            if (k === -D || (k !== D && vb[off + k - 1] < vb[off + k + 1])) x = vb[off + k + 1];
+                            else x = vb[off + k - 1] + 1;
+                            let y = x - k;
+                            const x0 = x, y0 = y;
+                            while (x < N && y < M && a[aLo + N - 1 - x] === b[bLo + M - 1 - y]) { x++; y++; }
+                            vb[off + k] = x;
+                            if (!odd && delta - k >= -D && delta - k <= D &&
+                                x + vf[off + delta - k] >= N && x <= N && y <= M) {
+                                return [N - x, M - y, N - x0, M - y0];
+                            }
+                        }
+                    }
+                    return null;
                 }
-                return result;
+
+                function rec(aLo, aHi, bLo, bHi) {
+                    while (aLo < aHi && bLo < bHi && a[aLo] === b[bLo]) {
+                        out.push({ type: 'unchanged', value: w1[aLo] });
+                        aLo++; bLo++;
+                    }
+                    let sfx = 0;
+                    while (aLo < aHi && bLo < bHi && a[aHi - 1] === b[bHi - 1]) {
+                        aHi--; bHi--; sfx++;
+                    }
+                    const N = aHi - aLo, M = bHi - bLo;
+                    if (N === 0) {
+                        for (let j = bLo; j < bHi; j++) out.push({ type: 'added', value: w2[j] });
+                    } else if (M === 0) {
+                        for (let i = aLo; i < aHi; i++) out.push({ type: 'removed', value: w1[i] });
+                    } else {
+                        const s = middle(aLo, N, bLo, M);
+                        const noProgress = !s || (s[0] === 0 && s[1] === 0 && s[2] === N && s[3] === M);
+                        if (noProgress) {
+                            for (let i = aLo; i < aHi; i++) out.push({ type: 'removed', value: w1[i] });
+                            for (let j = bLo; j < bHi; j++) out.push({ type: 'added', value: w2[j] });
+                        } else {
+                            rec(aLo, aLo + s[0], bLo, bLo + s[1]);
+                            for (let t = 0; t < s[2] - s[0]; t++) {
+                                out.push({ type: 'unchanged', value: w1[aLo + s[0] + t] });
+                            }
+                            rec(aLo + s[2], aHi, bLo + s[3], bHi);
+                        }
+                    }
+                    for (let t = 0; t < sfx; t++) out.push({ type: 'unchanged', value: w1[aHi + t] });
+                }
+
+                rec(0, a.length, 0, b.length);
+                return out;
             }
 
             function mergeConsecutive(items) {
@@ -777,7 +864,7 @@
                 return (matched / maxLen) >= threshold;
             }
 
-            function refineDiff(diff, threshold) {
+            function refineDiff(diff, threshold, maxD) {
                 const refined = [];
                 let i = 0;
                 while (i < diff.length) {
@@ -795,7 +882,7 @@
                         j++;
                     }
                     if (removedText && addedText && isSimilar(removedText, addedText, threshold)) {
-                        const charDiff = computeDiff(removedText.split(''), addedText.split(''));
+                        const charDiff = computeDiff(removedText.split(''), addedText.split(''), maxD);
                         refined.push(...mergeConsecutive(charDiff));
                     } else {
                         if (removedText) refined.push({ type: 'removed', value: removedText });
@@ -806,50 +893,14 @@
                 return refined;
             }
 
-            function trimCommon(arr1, arr2) {
-                let start = 0;
-                const minLen = Math.min(arr1.length, arr2.length);
-                while (start < minLen && arr1[start] === arr2[start]) start++;
-
-                let end1 = arr1.length, end2 = arr2.length;
-                while (end1 > start && end2 > start && arr1[end1 - 1] === arr2[end2 - 1]) {
-                    end1--; end2--;
-                }
-
-                return {
-                    prefix: arr1.slice(0, start),
-                    suffix: arr1.slice(end1),
-                    mid1: arr1.slice(start, end1),
-                    mid2: arr2.slice(start, end2)
-                };
-            }
-
-            function blockDiff(arr1, arr2) {
-                return mergeConsecutive([
-                    ...arr1.map(v => ({ type: 'removed', value: v })),
-                    ...arr2.map(v => ({ type: 'added',   value: v }))
-                ]);
-            }
-
-            function runDiff(words1, words2, maxDpCells, threshold) {
-                const trimmed = trimCommon(words1, words2);
-                let midDiff;
-                const cells = (trimmed.mid1.length + 1) * (trimmed.mid2.length + 1);
-                if (cells > maxDpCells) {
-                    midDiff = blockDiff(trimmed.mid1, trimmed.mid2);
-                } else {
-                    midDiff = computeDiff(trimmed.mid1, trimmed.mid2);
-                }
-                const refinedMid = refineDiff(midDiff, threshold);
-                const prefixItems = trimmed.prefix.map(v => ({ type: 'unchanged', value: v }));
-                const suffixItems = trimmed.suffix.map(v => ({ type: 'unchanged', value: v }));
-                return prefixItems.concat(refinedMid, suffixItems);
+            function runDiff(words1, words2, maxD, threshold) {
+                return refineDiff(computeDiff(words1, words2, maxD), threshold, maxD);
             }
         `;
 
         (function installMainThreadDiff() {
             const factory = new Function(DIFF_SOURCE + `
-                return { computeDiff, refineDiff, isSimilar, mergeConsecutive, trimCommon, blockDiff, runDiff };
+                return { computeDiff, refineDiff, isSimilar, mergeConsecutive, runDiff };
             `);
             window.__diff = factory();
         })();
@@ -865,9 +916,9 @@
 
             const workerSource = DIFF_SOURCE + `
                 self.onmessage = function(e) {
-                    const { words1, words2, maxDpCells, threshold } = e.data;
+                    const { words1, words2, maxEditDistance, threshold } = e.data;
                     try {
-                        const full = runDiff(words1, words2, maxDpCells, threshold);
+                        const full = runDiff(words1, words2, maxEditDistance, threshold);
                         self.postMessage({ ok: true, diff: full });
                     } catch (err) {
                         self.postMessage({ ok: false, error: String(err && err.message || err) });
@@ -916,8 +967,6 @@
             toastTimer = setTimeout(() => t.classList.remove('visible'), 3200);
         }
 
-        function escapeRegExpSafe(s) { return s; } // placeholder, unused
-
         // ------------------------------------------------------------------
         // History (localStorage-backed)
         // ------------------------------------------------------------------
@@ -942,20 +991,22 @@
         }
 
         function saveHistory() {
-            try {
-                localStorage.setItem(CONFIG.historyStorageKey, JSON.stringify(history));
-            } catch (err) {
-                // Quota exceeded or storage disabled — degrade gracefully.
-                console.warn('Could not save history:', err);
-                showToast('History is full — oldest entries were dropped.', 'error');
-                // Trim and retry once.
-                if (history.length > 10) {
-                    history = history.slice(0, 10);
-                    try {
-                        localStorage.setItem(CONFIG.historyStorageKey, JSON.stringify(history));
-                    } catch (_) { /* give up */ }
+            // Keep dropping the oldest entries until the data fits in storage.
+            let dropped = false;
+            while (true) {
+                try {
+                    localStorage.setItem(CONFIG.historyStorageKey, JSON.stringify(history));
+                    break;
+                } catch (err) {
+                    if (history.length <= 1) {
+                        console.warn('Could not save history:', err);
+                        break;
+                    }
+                    history = history.slice(0, history.length - 1);
+                    dropped = true;
                 }
             }
+            if (dropped) showToast('History is full \u2014 oldest entries were dropped.', 'error');
         }
 
         function summarizeDiff(diff) {
@@ -1172,7 +1223,7 @@
                 console.warn('Worker diff failed, falling back to main thread:', err);
                 try {
                     const diff = window.__diff.runDiff(
-                        words1, words2, CONFIG.maxDpCells, CONFIG.similarityThreshold
+                        words1, words2, CONFIG.maxEditDistance, CONFIG.similarityThreshold
                     );
                     onSuccess(diff);
                 } catch (innerErr) {
@@ -1195,7 +1246,7 @@
                     };
                     worker.postMessage({
                         words1, words2,
-                        maxDpCells: CONFIG.maxDpCells,
+                        maxEditDistance: CONFIG.maxEditDistance,
                         threshold: CONFIG.similarityThreshold
                     });
                     return;
@@ -1208,7 +1259,7 @@
             setTimeout(() => {
                 try {
                     const diff = window.__diff.runDiff(
-                        words1, words2, CONFIG.maxDpCells, CONFIG.similarityThreshold
+                        words1, words2, CONFIG.maxEditDistance, CONFIG.similarityThreshold
                     );
                     onSuccess(diff);
                 } catch (err) {
