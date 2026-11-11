@@ -731,7 +731,11 @@
             // each side of a change before collapsing the middle.
             changesContext: 6,
             historyLimit: 50,
-            historyStorageKey: 'text-diff-history-v1'
+            // Legacy localStorage key: used only for one-time migration and
+            // as a fallback if IndexedDB is unavailable.
+            historyStorageKey: 'text-diff-history-v1',
+            historyDbName: 'text-diff-viewer',
+            historyStoreName: 'history'
         };
 
         // ------------------------------------------------------------------
@@ -968,45 +972,122 @@
         }
 
         // ------------------------------------------------------------------
-        // History (localStorage-backed)
+        // History storage (IndexedDB, with localStorage as fallback only)
         // ------------------------------------------------------------------
-        function loadHistory() {
+        const HistoryDB = (() => {
+            let dbPromise = null;
+
+            function open() {
+                if (dbPromise) return dbPromise;
+                dbPromise = new Promise((resolve, reject) => {
+                    if (!window.indexedDB) { reject(new Error('IndexedDB unavailable')); return; }
+                    let req;
+                    try { req = indexedDB.open(CONFIG.historyDbName, 1); }
+                    catch (err) { reject(err); return; }
+                    req.onupgradeneeded = () => {
+                        const db = req.result;
+                        if (!db.objectStoreNames.contains(CONFIG.historyStoreName)) {
+                            db.createObjectStore(CONFIG.historyStoreName, { keyPath: 'id' });
+                        }
+                    };
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                    req.onblocked = () => reject(new Error('IndexedDB blocked'));
+                });
+                dbPromise.catch(() => { dbPromise = null; });
+                return dbPromise;
+            }
+
+            async function getAll() {
+                const db = await open();
+                return new Promise((resolve, reject) => {
+                    const req = db.transaction(CONFIG.historyStoreName, 'readonly')
+                                  .objectStore(CONFIG.historyStoreName).getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+            }
+
+            // Replace the stored set with `entries` in one atomic transaction.
+            async function replaceAll(entries) {
+                const db = await open();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(CONFIG.historyStoreName, 'readwrite');
+                    const store = tx.objectStore(CONFIG.historyStoreName);
+                    store.clear();
+                    for (const e of entries) store.put(e);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
+                });
+            }
+
+            return { getAll, replaceAll };
+        })();
+
+        function isValidEntry(e) {
+            return e && typeof e === 'object' &&
+                typeof e.id === 'string' &&
+                typeof e.text1 === 'string' &&
+                typeof e.text2 === 'string' &&
+                Array.isArray(e.diff);
+        }
+
+        function readLegacyLocalStorage() {
             try {
                 const raw = localStorage.getItem(CONFIG.historyStorageKey);
                 if (!raw) return [];
                 const parsed = JSON.parse(raw);
-                if (!Array.isArray(parsed)) return [];
-                // Basic validation so a corrupted entry doesn't break the UI.
-                return parsed.filter(e =>
-                    e && typeof e === 'object' &&
-                    typeof e.id === 'string' &&
-                    typeof e.text1 === 'string' &&
-                    typeof e.text2 === 'string' &&
-                    Array.isArray(e.diff)
-                );
+                return Array.isArray(parsed) ? parsed.filter(isValidEntry) : [];
             } catch (err) {
-                console.warn('Could not load history:', err);
                 return [];
             }
         }
 
-        function saveHistory() {
-            // Keep dropping the oldest entries until the data fits in storage.
-            let dropped = false;
-            while (true) {
-                try {
-                    localStorage.setItem(CONFIG.historyStorageKey, JSON.stringify(history));
-                    break;
-                } catch (err) {
-                    if (history.length <= 1) {
-                        console.warn('Could not save history:', err);
-                        break;
-                    }
-                    history = history.slice(0, history.length - 1);
-                    dropped = true;
-                }
+        async function loadHistory() {
+            let entries = [];
+            let dbOk = true;
+            try {
+                entries = (await HistoryDB.getAll()).filter(isValidEntry);
+            } catch (err) {
+                dbOk = false;
+                console.warn('IndexedDB unavailable, falling back to localStorage:', err);
             }
-            if (dropped) showToast('History is full \u2014 oldest entries were dropped.', 'error');
+
+            const legacy = readLegacyLocalStorage();
+            if (dbOk) {
+                // One-time migration from localStorage into IndexedDB.
+                if (legacy.length) {
+                    const have = new Set(entries.map(e => e.id));
+                    entries = entries.concat(legacy.filter(e => !have.has(e.id)));
+                    try {
+                        await HistoryDB.replaceAll(entries);
+                        localStorage.removeItem(CONFIG.historyStorageKey);
+                    } catch (err) {
+                        console.warn('History migration failed:', err);
+                    }
+                }
+            } else {
+                entries = legacy;
+            }
+            return entries.sort((a, b) => b.ts - a.ts).slice(0, CONFIG.historyLimit);
+        }
+
+        let historySaveChain = Promise.resolve();
+        function saveHistory() {
+            const snapshot = history.slice();
+            // Serialise writes so rapid edits can't land out of order.
+            historySaveChain = historySaveChain
+                .then(() => HistoryDB.replaceAll(snapshot))
+                .catch(err => {
+                    console.warn('IndexedDB save failed, trying localStorage:', err);
+                    try {
+                        localStorage.setItem(CONFIG.historyStorageKey, JSON.stringify(snapshot));
+                    } catch (err2) {
+                        console.warn('Could not save history:', err2);
+                        showToast('Could not save history in this browser.', 'error');
+                    }
+                });
         }
 
         function summarizeDiff(diff) {
@@ -1633,9 +1714,16 @@
             });
         });
 
-        // Initialise history from storage and render.
-        history = loadHistory();
+        // Initialise history from IndexedDB (async) and render.
         renderHistory();
+        loadHistory().then(loaded => {
+            // Merge in case a comparison finished before the load did.
+            const have = new Set(history.map(e => e.id));
+            history = history.concat(loaded.filter(e => !have.has(e.id)))
+                             .sort((a, b) => b.ts - a.ts)
+                             .slice(0, CONFIG.historyLimit);
+            renderHistory();
+        });
 
         // Pre-warm the PDF library in the background.
         loadHtml2Pdf().catch(() => {});
